@@ -15,7 +15,6 @@
 package net.utp4j.channels.impl;
 
 import net.utp4j.channels.UtpSocketState;
-import net.utp4j.channels.futures.UtpCloseFuture;
 import net.utp4j.channels.futures.UtpConnectFuture;
 import net.utp4j.channels.futures.UtpWriteFuture;
 import net.utp4j.channels.impl.alg.UtpAlgConfiguration;
@@ -544,7 +543,7 @@ public class UTPClient implements
     }
 
 
-    public UtpCloseFuture close() {
+    public void close() {
         abortImpl();
         if (isReading()) {
             reader.graceFullInterrupt();
@@ -552,7 +551,6 @@ public class UTPClient implements
         if (isWriting()) {
             writer.graceFullInterrupt();
         }
-        return null;
     }
 
     public boolean isReading() {
