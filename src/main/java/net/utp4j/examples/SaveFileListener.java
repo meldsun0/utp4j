@@ -25,6 +25,7 @@ public class SaveFileListener extends UtpReadListener {
 
     private int file;
     private volatile boolean append = false;
+    private String name;
 
     public SaveFileListener(int i, boolean concat) {
         file = i;
@@ -36,7 +37,13 @@ public class SaveFileListener extends UtpReadListener {
         file = i;
     }
 
-    public SaveFileListener() {
+    public SaveFileListener(String name) {
+        if(name==null ){
+            this.name = "gotData";
+        }else{
+        this.name = name;
+
+        }
     }
 
     public SaveFileListener(boolean concat) {
@@ -49,7 +56,7 @@ public class SaveFileListener extends UtpReadListener {
         if (exception == null && byteBuffer != null) {
             try {
                 byteBuffer.flip();
-                File outFile = new File("testData/gotData_" + file + " .avi");
+                File outFile = new File("testData/"+this.name+"_" + file + " .avi");
                 FileOutputStream fileOutputStream = new FileOutputStream(outFile, append);
                 FileChannel fchannel = fileOutputStream.getChannel();
                 while (byteBuffer.hasRemaining()) {

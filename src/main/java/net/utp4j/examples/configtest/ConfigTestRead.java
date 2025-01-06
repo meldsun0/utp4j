@@ -18,6 +18,7 @@ import net.utp4j.channels.UtpServerSocketChannel;
 import net.utp4j.channels.UtpSocketChannel;
 import net.utp4j.channels.futures.UtpAcceptFuture;
 import net.utp4j.channels.futures.UtpReadFuture;
+import net.utp4j.channels.impl.UTPServer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,10 +38,11 @@ public class ConfigTestRead {
     public static void main(String[] args) throws IOException, InterruptedException {
         ByteBuffer buffer = ByteBuffer.allocate(150000000);
         while (true) {
-            UtpServerSocketChannel server = UtpServerSocketChannel.open();
+            UtpServerSocketChannel server = new UTPServer(new InetSocketAddress(13344));
             server.bind(new InetSocketAddress(13344));
             UtpAcceptFuture acceptFuture = server.accept();
             acceptFuture.block();
+
             UtpSocketChannel channel = acceptFuture.getChannel();
             UtpReadFuture readFuture = channel.read(buffer);
             readFuture.setListener(null);

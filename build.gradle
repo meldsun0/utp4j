@@ -6,6 +6,10 @@ plugins {
     id 'java-library'
     id 'maven-publish'
 }
+group = 'utp4j'
+version = '0.0.2-SNAPSHOT'
+description = 'Micro Transport Protocol for Java'
+java.sourceCompatibility = JavaVersion.VERSION_17
 
 repositories {
     mavenLocal()
@@ -18,21 +22,20 @@ dependencies {
 
     api libs.org.slf4j.slf4j.api
     implementation libs.org.slf4j.slf4j.reload4j
+    implementation libs.apache.logging.log4j.api
+    implementation libs.apache.logging.log4j.core
 
     testImplementation libs.org.mockito.mockito.core
     testImplementation libs.org.mockito.mockito.junit.jupiter
     testImplementation libs.org.junit.jupiter.junit.jupiter.api
+
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.7.0'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.7.0'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.7.0'
+    testImplementation 'org.junit.platform:junit-platform-console-standalone:1.11.0'
+
 }
 
-group = 'utp4j'
-version = '0.0.2-SNAPSHOT'
-description = 'Micro Transport Protocol for Java'
-java.sourceCompatibility = JavaVersion.VERSION_17
-
-publishing {
-    publications {
-        maven(MavenPublication) {
-            from(components.java)
-        }
-    }
+test {
+    useJUnitPlatform()
 }

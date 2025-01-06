@@ -16,31 +16,20 @@
 package net.utp4j.channels;
 
 import net.utp4j.channels.futures.UtpAcceptFuture;
-import net.utp4j.channels.impl.UtpServerSocketChannelImpl;
+import net.utp4j.channels.impl.UTPServer;
 import net.utp4j.channels.impl.recieve.UtpRecieveRunnable;
 
 import java.io.IOException;
 import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
 
-/**
- * Server class interface
- *
- * @author Ivan Iljkic (i.iljkic@gmail.com)
- */
+
 public abstract class UtpServerSocketChannel {
 
     /*underlying socket*/
     private DatagramSocket socket;
 
-    /**
-     * Opens and returns a server
-     *
-     * @return server {@link UtpServerSocketChannel}
-     */
-    public static UtpServerSocketChannel open() {
-        return new UtpServerSocketChannelImpl();
-    }
+
 
     /*Subclasses implement this methods*/
     protected abstract UtpAcceptFuture acceptImpl() throws IOException;
@@ -63,7 +52,7 @@ public abstract class UtpServerSocketChannel {
      */
     public void bind(InetSocketAddress addr) throws IOException {
         setSocket(new DatagramSocket(addr));
-        UtpServerSocketChannelImpl me = (UtpServerSocketChannelImpl) this;
+        UTPServer me = (UTPServer) this;
         me.setListenRunnable(new UtpRecieveRunnable(this.getSocket(), me));
     }
 

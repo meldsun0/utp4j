@@ -1,3 +1,9 @@
 /bin
 /target
 /codecover
+
+
+.idea
+.gradle
+/testData
+/build

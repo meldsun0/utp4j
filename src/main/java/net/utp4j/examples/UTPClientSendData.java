@@ -16,17 +16,57 @@ package net.utp4j.examples;
 
 import net.utp4j.channels.UtpSocketChannel;
 import net.utp4j.channels.futures.UtpConnectFuture;
+import net.utp4j.channels.futures.UtpReadFuture;
 import net.utp4j.channels.futures.UtpWriteFuture;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 
-public class TestWrite {
+public class UTPClientSendData {
     public static void main(String[] args) throws IOException, InterruptedException {
+        ByteBuffer RB = ByteBuffer.allocate(150000000);
+        while (true) {
+            UtpSocketChannel chanel = UtpSocketChannel.open();
+            UtpConnectFuture cFuture = chanel.connect(new InetSocketAddress("localhost", 13344));
+            cFuture.block();
 
+            if(cFuture.isSuccessfull()){
+                System.out.println("Starting reading");
+                UtpReadFuture a = chanel.read(RB);
+                a.setListener(new SaveFileListener("answer"));
+                a.block();
+                while(!a.isDone()){
+                    System.out.println("reading");
+                }
+                chanel.close();
+                chanel = null;
+
+            }else{
+                System.out.println("error");
+            }
+        }
+
+
+
+//        UtpWriteFuture fut = chanel.write(getDataToSend());
+//        fut.block();
+//        System.out.println("writing test done");
+
+
+
+
+
+
+
+
+
+    }
+
+    public static ByteBuffer getDataToSend() throws IOException {
         ByteBuffer buffer = ByteBuffer.allocate(150000000);
         RandomAccessFile file = new RandomAccessFile("testData/sc S01E01.avi", "rw");
         FileChannel fileChannel = file.getChannel();
@@ -36,18 +76,7 @@ public class TestWrite {
             bytesRead = fileChannel.read(buffer);
         } while (bytesRead != -1);
         System.out.println("file read");
-
-        UtpSocketChannel chanel = UtpSocketChannel.open();
-//		UtpConnectFuture cFuture = chanel.connect(new InetSocketAddress("192.168.1.40", 13344));
-        UtpConnectFuture cFuture = chanel.connect(new InetSocketAddress("localhost", 13344));
-//		UtpConnectFuture cFuture = chanel.connect(new InetSocketAddress("192.168.1.44", 13344));
-        cFuture.block();
-
-        UtpWriteFuture fut = chanel.write(buffer);
-        fut.block();
-        System.out.println("writing test done");
-        chanel.close();
-
+        return buffer;
     }
 
 }

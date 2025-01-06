@@ -25,34 +25,51 @@ import net.utp4j.channels.impl.recieve.UtpPacketRecievable;
 import net.utp4j.channels.impl.recieve.UtpRecieveRunnable;
 import net.utp4j.data.UtpPacket;
 import net.utp4j.data.UtpPacketUtils;
+import org.apache.log4j.LogManager;
+import org.apache.log4j.Logger;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
+import java.net.InetSocketAddress;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
 import java.util.Queue;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicBoolean;
 
-public class UtpServerSocketChannelImpl extends UtpServerSocketChannel implements UtpPacketRecievable {
+public class UTPServer extends UtpServerSocketChannel implements UtpPacketRecievable {
+
+    private static final Logger LOG = LogManager.getLogger(UTPServer.class);
 
     private UtpRecieveRunnable listenRunnable;
     private final Queue<UtpAcceptFutureImpl> acceptQueue = new LinkedList<UtpAcceptFutureImpl>();
     private final Map<Integer, ConnectionIdTriplet> connectionIds = new HashMap<Integer, ConnectionIdTriplet>();
-    private boolean listenRunnerStarted = false;
 
+
+    private AtomicBoolean listen = new AtomicBoolean(false);
+    private final InetSocketAddress listenAddress;
+
+
+    public UTPServer(InetSocketAddress listenAddress) {
+        this.listenAddress = listenAddress;
+    }
 
     /*
      * implements accept.
      */
     @Override
     protected UtpAcceptFuture acceptImpl() {
-
-        if (!listenRunnerStarted) {
-            Thread listenRunner = new Thread(getListenRunnable(),
-                    "listenRunnable_" + getSocket().getLocalPort());
-            listenRunner.start();
-            listenRunnerStarted = true;
+        //LOG.info("Starting UTP server listening on {}", listenAddress);
+        if (!listen.compareAndSet(false, true)) {
+            return null ; //CompletableFuture.failedFuture(new IllegalStateException("Attempted to start an already started server listening on " + listenAddress));
         }
+        Thread listenRunner = new Thread(getListenRunnable(), "listenRunnable_" + getSocket().getLocalPort());
+        listenRunner.start();
+
+
+
+
 
         UtpAcceptFutureImpl future;
         try {

@@ -91,7 +91,8 @@ public class UtpAlgorithmTest {
         when(stamper.timeStamp()).thenReturn(0L);
 
         UtpAlgorithm algorithm = new UtpAlgorithm(stamper, new InetSocketAddress(51235));
-        ByteBuffer bufferMock = mock(ByteBuffer.class);
+        ByteBuffer bufferMock = ByteBuffer.allocate(10);
+        bufferMock.put(0, (byte) 42);
         algorithm.setByteBuffer(bufferMock);
 
         // Add some packets, 4...14
@@ -186,7 +187,8 @@ public class UtpAlgorithmTest {
         when(stamper.timeStamp()).thenReturn(0L);
 
         UtpAlgorithm algorithm = new UtpAlgorithm(stamper, new InetSocketAddress(51235));
-        ByteBuffer bufferMock = mock(ByteBuffer.class);
+        ByteBuffer bufferMock = ByteBuffer.allocate(10);
+        bufferMock.put(0, (byte) 42);
         algorithm.setByteBuffer(bufferMock);
 
         UtpTimestampedPacketDTO pkt = createPacket(5);

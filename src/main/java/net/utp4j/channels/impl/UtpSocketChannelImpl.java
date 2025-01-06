@@ -59,7 +59,7 @@ public class UtpSocketChannelImpl extends UtpSocketChannel implements
     private UtpReadingRunnable reader;
     private final Object sendLock = new Object();
 
-    private UtpServerSocketChannelImpl server;
+    private UTPServer server;
     private ScheduledExecutorService retryConnectionTimeScheduler;
     private int connectionAttempts = 0;
 
@@ -432,8 +432,8 @@ public class UtpSocketChannelImpl extends UtpSocketChannel implements
         this.ackNumber = ackNumber;
     }
 
-    public void setServer(UtpServerSocketChannelImpl utpServerSocketChannelImpl) {
-        this.server = utpServerSocketChannelImpl;
+    public void setServer(UTPServer UTPServer) {
+        this.server = UTPServer;
 
     }
 
