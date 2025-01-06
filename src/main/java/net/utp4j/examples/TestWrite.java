@@ -1,8 +1,8 @@
 package net.utp4j.examples;
 
-import net.utp4j.channels.UtpSocketChannel;
 import net.utp4j.channels.futures.UtpConnectFuture;
 import net.utp4j.channels.futures.UtpWriteFuture;
+import net.utp4j.channels.impl.UtpSocketChannelImpl;
 
 import java.io.IOException;
 import java.io.RandomAccessFile;
@@ -23,7 +23,7 @@ public class TestWrite {
         } while (bytesRead != -1);
         System.out.println("file read");
 
-        UtpSocketChannel chanel = UtpSocketChannel.open();
+        UtpSocketChannelImpl chanel = UtpSocketChannelImpl.open();
 //		UtpConnectFuture cFuture = chanel.connect(new InetSocketAddress("192.168.1.40", 13344));
         UtpConnectFuture cFuture = chanel.connect(new InetSocketAddress("localhost", 13344));
 //		UtpConnectFuture cFuture = chanel.connect(new InetSocketAddress("192.168.1.44", 13344));

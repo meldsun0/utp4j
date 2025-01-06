@@ -14,12 +14,10 @@
  */
 package net.utp4j.examples;
 
-import net.utp4j.channels.UtpSocketChannel;
 import net.utp4j.channels.futures.UtpConnectFuture;
 import net.utp4j.channels.futures.UtpReadFuture;
-import net.utp4j.channels.futures.UtpWriteFuture;
+import net.utp4j.channels.impl.UtpSocketChannelImpl;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.net.InetSocketAddress;
@@ -30,7 +28,7 @@ public class UTPClientSendData {
     public static void main(String[] args) throws IOException, InterruptedException {
         ByteBuffer RB = ByteBuffer.allocate(150000000);
         while (true) {
-            UtpSocketChannel chanel = UtpSocketChannel.open();
+            UtpSocketChannelImpl chanel = UtpSocketChannelImpl.open();
             UtpConnectFuture cFuture = chanel.connect(new InetSocketAddress("localhost", 13344));
             cFuture.block();
 

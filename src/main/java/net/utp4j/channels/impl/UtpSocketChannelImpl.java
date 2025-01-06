@@ -14,9 +14,9 @@
  */
 package net.utp4j.channels.impl;
 
-import net.utp4j.channels.UtpSocketChannel;
 import net.utp4j.channels.UtpSocketState;
 import net.utp4j.channels.futures.UtpCloseFuture;
+import net.utp4j.channels.futures.UtpConnectFuture;
 import net.utp4j.channels.futures.UtpWriteFuture;
 import net.utp4j.channels.impl.alg.UtpAlgConfiguration;
 import net.utp4j.channels.impl.conn.ConnectionTimeOutRunnable;
@@ -39,18 +39,66 @@ import java.net.SocketTimeoutException;
 import java.nio.ByteBuffer;
 import java.util.Random;
 import java.util.concurrent.*;
+import java.util.concurrent.locks.ReentrantLock;
 
 import static net.utp4j.channels.UtpSocketState.*;
 import static net.utp4j.data.UtpPacketUtils.*;
 import static net.utp4j.data.bytes.UnsignedTypesUtil.*;
 
-/**
- * Implements and hides implementation details from the superclass.
- *
- * @author Ivan Iljkic (i.iljkic@gmail.com)
- */
-public class UtpSocketChannelImpl extends UtpSocketChannel implements
+
+public class UtpSocketChannelImpl implements
         UtpPacketRecievable {
+
+
+    /* ID for outgoing packets */
+    private long connectionIdSending;
+
+    /* timestamping utility */
+    protected MicroSecondsTimeStamp timeStamper = new MicroSecondsTimeStamp();
+
+    /* current sequenceNumber */
+    private int sequenceNumber;
+
+    /* ID for incomming packets */
+    private long connectionIdRecieving;
+
+    /*
+     * address of the remote sockets which this socket is connected to
+     */
+    protected SocketAddress remoteAddress;
+
+    /* current ack Number */
+    protected int ackNumber;
+
+    /* reference to the underlying UDP Socket */
+    protected DatagramSocket dgSocket;
+
+    /*
+     * Connection Future Object - need to hold a reference here i case
+     * connection the initial connection attempt fails. So it will be updates
+     * once the reattempts success.
+     */
+    protected UtpConnectFutureImpl connectFuture = null;
+
+    /* lock for the socket state* */
+    protected final ReentrantLock stateLock = new ReentrantLock();
+
+    /* logger */
+    private static final Logger log = LoggerFactory
+            .getLogger(UtpSocketChannelImpl.class);
+
+    /* Current state of the socket */
+    protected volatile UtpSocketState state = null;
+
+    /* Sequencing begin */
+    protected static int DEF_SEQ_START = 1;
+
+
+
+
+
+
+
 
     private final BlockingQueue<UtpTimestampedPacketDTO> queue = new LinkedBlockingQueue<UtpTimestampedPacketDTO>();
 
@@ -66,8 +114,159 @@ public class UtpSocketChannelImpl extends UtpSocketChannel implements
     private int eofPacket;
 
 
-    private static final Logger log = LoggerFactory
-            .getLogger(UtpSocketChannelImpl.class);
+    /**
+     * Opens a new Socket and binds it to any available port
+     *
+     * @return {@link UtpSocketChannel}
+     * @throws IOException see {@link DatagramSocket#DatagramSocket()}
+     */
+    public static UtpSocketChannelImpl open() throws IOException {
+        UtpSocketChannelImpl c = new UtpSocketChannelImpl();
+        try {
+            c.setDgSocket(new DatagramSocket());
+            c.setState(CLOSED);
+        } catch (IOException exp) {
+            throw new IOException("Could not open UtpSocketChannel: "
+                    + exp.getMessage());
+        }
+        return c;
+    }
+
+    /**
+     * Connects this Socket to the specified address
+     *
+     * @param address
+     * @return {@link UtpConnectFuture}
+     */
+    public UtpConnectFuture connect(SocketAddress address) {
+        stateLock.lock();
+        try {
+            try {
+                connectFuture = new UtpConnectFutureImpl();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+                return null;
+            }
+            try {
+                /* underlying impl does it's connection setup */
+                connectImpl(connectFuture);
+
+                /* fill packet, set initial variables and send packet */
+                setRemoteAddress(address);
+                setupConnectionId();
+                setSequenceNumber(DEF_SEQ_START);
+
+                UtpPacket synPacket = UtpPacketUtils.createSynPacket();
+                synPacket
+                        .setConnectionId(longToUshort(getConnectionIdRecieving()));
+                synPacket.setTimestamp(timeStamper.utpTimeStamp());
+                sendPacket(synPacket);
+                setState(SYN_SENT);
+                printState("[Syn send] ");
+
+                incrementSequenceNumber();
+                startConnectionTimeOutCounter(synPacket);
+            } catch (IOException exp) {
+                // DO NOTHING, let's try later with reconnect runnable
+            }
+        } finally {
+            stateLock.unlock();
+        }
+
+        return connectFuture;
+    }
+
+
+    public long getConnectionIdsending() {
+        return connectionIdSending;
+    }
+
+    public boolean isOpen() {
+        return state != CLOSED;
+    }
+
+    public boolean isConnected() {
+        return getState() == UtpSocketState.CONNECTED;
+    }
+
+    public long getConnectionIdRecieving() {
+        return connectionIdRecieving;
+    }
+
+    public UtpSocketState getState() {
+        return state;
+    }
+
+    public SocketAddress getRemoteAdress() {
+        return remoteAddress;
+    }
+
+    public int getAckNumber() {
+        return ackNumber;
+    }
+
+    public int getSequenceNumber() {
+        return sequenceNumber;
+    }
+
+    public DatagramSocket getDgSocket() {
+        return dgSocket;
+    }
+
+
+    /* debug method to print id's, seq# and ack# */
+    protected void printState(String msg) {
+        String state = "[ConnID Sending: " + connectionIdSending + "] "
+                + "[ConnID Recv: " + connectionIdRecieving + "] [SeqNr. "
+                + sequenceNumber + "] [AckNr: " + ackNumber + "]";
+        log.debug(msg + state);
+
+    }
+
+    /*
+     * increments current sequence number unlike TCP, uTp is sequencing its
+     * packets, not bytes but the Seq# is only 16 bits, so overflows are likely
+     * to happen Seq# == 0 not possible.
+     */
+    protected void incrementSequenceNumber() {
+        int seqNumber = getSequenceNumber() + 1;
+        if (seqNumber > MAX_USHORT) {
+            seqNumber = 1;
+        }
+        setSequenceNumber(seqNumber);
+    }
+
+
+    private void setupConnectionId() {
+        Random rnd = new Random();
+        int max = (int) (MAX_USHORT - 1);
+        long rndInt = rnd.nextInt(max);
+        setConnectionIdRecieving(rndInt);
+        setConnectionIdsending(rndInt + 1);
+
+    }
+
+
+    /* set connection ID for outgoing packets */
+    protected void setConnectionIdsending(long connectionIdSending) {
+        this.connectionIdSending = connectionIdSending;
+    }
+
+
+
+    protected void setConnectionIdRecieving(long connectionIdRecieving) {
+        this.connectionIdRecieving = connectionIdRecieving;
+    }
+
+    public void setState(UtpSocketState state) {
+        this.state = state;
+    }
+
+
+    protected void setSequenceNumber(int sequenceNumber) {
+        this.sequenceNumber = sequenceNumber;
+    }
+
 
     /*
      * Handles packet.
@@ -237,7 +436,6 @@ public class UtpSocketChannelImpl extends UtpSocketChannel implements
                 pkt.getConnectionId(), udpPacket.getSocketAddress()));
     }
 
-    @Override
     protected void setAckNrFromPacketSqNr(UtpPacket utpPacket) {
         short ackNumberS = utpPacket.getSequenceNumber();
         setAckNumber(ackNumberS & 0xFFFF);
@@ -252,14 +450,12 @@ public class UtpSocketChannelImpl extends UtpSocketChannel implements
 
     }
 
-    @Override
     protected void connectImpl(UtpConnectFutureImpl future) {
         reciever = new UtpRecieveRunnable(getDgSocket(), this);
         reciever.start();
 
     }
 
-    @Override
     protected void abortImpl() {
         if (reciever != null) {
             reciever.graceFullInterrupt();
@@ -268,7 +464,6 @@ public class UtpSocketChannelImpl extends UtpSocketChannel implements
         }
     }
 
-    @Override
     public UtpWriteFuture write(ByteBuffer src) {
         UtpWriteFutureImpl future = null;
         try {
@@ -305,7 +500,6 @@ public class UtpSocketChannelImpl extends UtpSocketChannel implements
         return fin;
     }
 
-    @Override
     public UtpReadFutureImpl read(ByteBuffer dst) {
         UtpReadFutureImpl readFuture = null;
         try {
@@ -351,17 +545,7 @@ public class UtpSocketChannelImpl extends UtpSocketChannel implements
         return ackPacket;
     }
 
-    @Override
-    public UtpSocketState getState() {
-        return state;
-    }
 
-    @Override
-    public void setState(UtpSocketState state) {
-        this.state = state;
-    }
-
-    @Override
     public UtpCloseFuture close() {
         abortImpl();
         if (isReading()) {
@@ -373,12 +557,10 @@ public class UtpSocketChannelImpl extends UtpSocketChannel implements
         return null;
     }
 
-    @Override
     public boolean isReading() {
         return (reader != null && reader.isRunning());
     }
 
-    @Override
     public boolean isWriting() {
         return (writer != null && writer.isRunning());
     }
@@ -398,7 +580,6 @@ public class UtpSocketChannelImpl extends UtpSocketChannel implements
 
     }
 
-    @Override
     public void sendPacket(DatagramPacket pkt) throws IOException {
         synchronized (sendLock) {
             getDgSocket().send(pkt);
@@ -407,7 +588,6 @@ public class UtpSocketChannelImpl extends UtpSocketChannel implements
     }
 
     /* general method to send a packet, will be wrapped by a UDP Packet */
-    @Override
     public void sendPacket(UtpPacket packet) throws IOException {
         if (packet != null) {
             byte[] utpPacketBytes = packet.toByteArray();
@@ -418,7 +598,6 @@ public class UtpSocketChannelImpl extends UtpSocketChannel implements
         }
     }
 
-    @Override
     public void setDgSocket(DatagramSocket dgSocket) {
         if (this.dgSocket != null) {
             this.dgSocket.close();
@@ -426,7 +605,6 @@ public class UtpSocketChannelImpl extends UtpSocketChannel implements
         this.dgSocket = dgSocket;
     }
 
-    @Override
     public void setAckNumber(int ackNumber) {
 //		log.debug("ack nubmer set to: " + ackNumber);
         this.ackNumber = ackNumber;
@@ -437,7 +615,6 @@ public class UtpSocketChannelImpl extends UtpSocketChannel implements
 
     }
 
-    @Override
     public void setRemoteAddress(SocketAddress remoteAdress) {
         this.remoteAddress = remoteAdress;
     }
@@ -457,7 +634,6 @@ public class UtpSocketChannelImpl extends UtpSocketChannel implements
     /*
      * Start a connection time out counter which will frequently resend the syn packet.
      */
-    @Override
     protected void startConnectionTimeOutCounter(UtpPacket synPacket) {
         retryConnectionTimeScheduler = Executors
                 .newSingleThreadScheduledExecutor();

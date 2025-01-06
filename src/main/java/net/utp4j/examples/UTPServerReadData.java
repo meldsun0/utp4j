@@ -15,12 +15,11 @@
 package net.utp4j.examples;
 
 
-import net.utp4j.channels.UtpSocketChannel;
 import net.utp4j.channels.futures.UtpAcceptFuture;
 import net.utp4j.channels.futures.UtpReadFuture;
 import net.utp4j.channels.futures.UtpWriteFuture;
 import net.utp4j.channels.impl.UTPServer;
-import org.apache.log4j.net.SyslogAppender;
+import net.utp4j.channels.impl.UtpSocketChannelImpl;
 
 import java.io.IOException;
 import java.io.RandomAccessFile;
@@ -40,7 +39,7 @@ public class UTPServerReadData {
 
 
         System.out.println("Send data");
-        UtpSocketChannel channel = acceptFuture.getChannel();
+        UtpSocketChannelImpl channel = acceptFuture.getChannel();
         UtpWriteFuture writeFuture = channel.write( getDataToSend());
         writeFuture.block();
         if (writeFuture.isSuccessfull()) {
@@ -52,7 +51,7 @@ public class UTPServerReadData {
         server.close();
     }
 
-    public static void readData(UtpSocketChannel channel) throws InterruptedException {
+    public static void readData(UtpSocketChannelImpl channel) throws InterruptedException {
         ByteBuffer buffer = ByteBuffer.allocate(150000000);
         UtpReadFuture readFuture = channel.read(buffer);
         readFuture.setListener(new SaveFileListener(null));

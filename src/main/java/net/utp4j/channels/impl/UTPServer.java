@@ -1,13 +1,10 @@
 package net.utp4j.channels.impl;
 
-import net.utp4j.channels.UtpSocketChannel;
 import net.utp4j.channels.UtpSocketState;
-import net.utp4j.channels.exception.CannotCloseServerException;
 import net.utp4j.channels.futures.UtpAcceptFuture;
 import net.utp4j.channels.impl.accept.UtpAcceptFutureImpl;
 import net.utp4j.channels.impl.recieve.ConnectionIdTriplet;
 import net.utp4j.channels.impl.recieve.UtpPacketRecievable;
-import net.utp4j.channels.impl.recieve.UtpRecieveRunnable;
 import net.utp4j.data.UtpPacket;
 import net.utp4j.data.UtpPacketUtils;
 import org.apache.logging.log4j.LogManager;
@@ -95,7 +92,7 @@ public class UTPServer implements UtpPacketRecievable {
             UtpAcceptFutureImpl future = acceptQueue.poll();
             UtpSocketChannelImpl utpChannel = null;
             try {
-                utpChannel = (UtpSocketChannelImpl) UtpSocketChannel.open();
+                utpChannel =  UtpSocketChannelImpl.open();
                 utpChannel.setDgSocket(this.socket);
                 utpChannel.recievePacket(packet);
                 utpChannel.setServer(this);

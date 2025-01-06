@@ -15,10 +15,10 @@
 package net.utp4j.examples.configtest;
 
 
-import net.utp4j.channels.UtpSocketChannel;
 import net.utp4j.channels.futures.UtpAcceptFuture;
 import net.utp4j.channels.futures.UtpReadFuture;
 import net.utp4j.channels.impl.UTPServer;
+import net.utp4j.channels.impl.UtpSocketChannelImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,7 +43,7 @@ public class ConfigTestRead {
             UtpAcceptFuture acceptFuture = server.start();
             acceptFuture.block();
 
-            UtpSocketChannel channel = acceptFuture.getChannel();
+            UtpSocketChannelImpl channel = acceptFuture.getChannel();
             UtpReadFuture readFuture = channel.read(buffer);
             readFuture.setListener(null);
             readFuture.block();

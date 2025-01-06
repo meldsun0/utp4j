@@ -14,7 +14,6 @@
  */
 package net.utp4j.channels.futures;
 
-import net.utp4j.channels.UtpSocketChannel;
 import net.utp4j.channels.impl.UtpSocketChannelImpl;
 
 /**
@@ -30,7 +29,7 @@ public class UtpAcceptFuture extends UtpBlockableFuture {
 
     protected volatile UtpSocketChannelImpl channel = null;
 
-    public UtpSocketChannel getChannel() {
+    public UtpSocketChannelImpl getChannel() {
         return channel;
     }
 
