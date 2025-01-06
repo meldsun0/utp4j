@@ -1,17 +1,3 @@
-/* Copyright 2013 Ivan Iljkic
- *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not
- * use this file except in compliance with the License. You may obtain a copy of
- * the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations under
- * the License.
- */
 package net.utp4j.channels.impl;
 
 import net.utp4j.channels.UtpServerSocketChannel;
@@ -25,12 +11,14 @@ import net.utp4j.channels.impl.recieve.UtpPacketRecievable;
 import net.utp4j.channels.impl.recieve.UtpRecieveRunnable;
 import net.utp4j.data.UtpPacket;
 import net.utp4j.data.UtpPacketUtils;
-import org.apache.log4j.LogManager;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
+import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
+import java.net.SocketException;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
@@ -53,23 +41,19 @@ public class UTPServer extends UtpServerSocketChannel implements UtpPacketReciev
 
     public UTPServer(InetSocketAddress listenAddress) {
         this.listenAddress = listenAddress;
+
     }
 
-    /*
-     * implements accept.
-     */
-    @Override
-    protected UtpAcceptFuture acceptImpl() {
-        //LOG.info("Starting UTP server listening on {}", listenAddress);
+
+    public UtpAcceptFuture start() throws SocketException {
+        LOG.info("Starting UTP server listening on {}", listenAddress);
         if (!listen.compareAndSet(false, true)) {
             return null ; //CompletableFuture.failedFuture(new IllegalStateException("Attempted to start an already started server listening on " + listenAddress));
         }
-        Thread listenRunner = new Thread(getListenRunnable(), "listenRunnable_" + getSocket().getLocalPort());
+        this.socket = new DatagramSocket(this.listenAddress);
+        this.listenRunnable = new UtpRecieveRunnable(this.getSocket(), this);
+        Thread listenRunner = new Thread(this.listenRunnable, "listenRunnable_" + getSocket().getLocalPort());
         listenRunner.start();
-
-
-
-
 
         UtpAcceptFutureImpl future;
         try {
@@ -80,7 +64,9 @@ public class UTPServer extends UtpServerSocketChannel implements UtpPacketReciev
             // TODO Auto-generated catch block
             e.printStackTrace();
         }
+
         return null;
+
     }
 
     /*
@@ -145,13 +131,6 @@ public class UTPServer extends UtpServerSocketChannel implements UtpPacketReciev
         }
     }
 
-    protected UtpRecieveRunnable getListenRunnable() {
-        return listenRunnable;
-    }
-
-    public void setListenRunnable(UtpRecieveRunnable listenRunnable) {
-        this.listenRunnable = listenRunnable;
-    }
 
     /*
      * registers a channel.

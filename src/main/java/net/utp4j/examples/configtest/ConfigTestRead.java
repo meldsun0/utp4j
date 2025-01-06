@@ -38,9 +38,9 @@ public class ConfigTestRead {
     public static void main(String[] args) throws IOException, InterruptedException {
         ByteBuffer buffer = ByteBuffer.allocate(150000000);
         while (true) {
-            UtpServerSocketChannel server = new UTPServer(new InetSocketAddress(13344));
-            server.bind(new InetSocketAddress(13344));
-            UtpAcceptFuture acceptFuture = server.accept();
+            UTPServer server = new UTPServer(new InetSocketAddress(13344));
+            server.start();
+            UtpAcceptFuture acceptFuture = server.start();
             acceptFuture.block();
 
             UtpSocketChannel channel = acceptFuture.getChannel();

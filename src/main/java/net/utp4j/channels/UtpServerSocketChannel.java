@@ -27,44 +27,14 @@ import java.net.InetSocketAddress;
 public abstract class UtpServerSocketChannel {
 
     /*underlying socket*/
-    private DatagramSocket socket;
+    protected DatagramSocket socket;
 
-
-
-    /*Subclasses implement this methods*/
-    protected abstract UtpAcceptFuture acceptImpl() throws IOException;
-
-    /**
-     * Listens on incomming Connection requests
-     *
-     * @return {@link UtpAcceptFuture}
-     * @throws IOException
-     */
-    public UtpAcceptFuture accept() throws IOException {
-        return acceptImpl();
-    }
-
-    /**
-     * Binds the server to an {@link DatagramSocket} and binds {@link InetSocketAddress}
-     *
-     * @param addr
-     * @throws IOException see {@link DatagramSocket} Constructor Details
-     */
-    public void bind(InetSocketAddress addr) throws IOException {
-        setSocket(new DatagramSocket(addr));
-        UTPServer me = (UTPServer) this;
-        me.setListenRunnable(new UtpRecieveRunnable(this.getSocket(), me));
-    }
 
 
     protected DatagramSocket getSocket() {
         return socket;
     }
 
-
-    protected void setSocket(DatagramSocket socket) {
-        this.socket = socket;
-    }
 
     /**
      * Closes this server and unbinds the underlying UDP Socket.

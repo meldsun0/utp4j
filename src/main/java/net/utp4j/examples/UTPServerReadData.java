@@ -32,11 +32,10 @@ public class UTPServerReadData {
 
     public static void main(String[] args) throws IOException, InterruptedException {
 
-        UtpServerSocketChannel server = new UTPServer(new InetSocketAddress(13344));
+        UTPServer server = new UTPServer(new InetSocketAddress(13344));
+        server.start();
 
-
-        server.bind(new InetSocketAddress(13344));
-        UtpAcceptFuture acceptFuture = server.accept();
+        UtpAcceptFuture acceptFuture = server.start();
         acceptFuture.block();
 
 
