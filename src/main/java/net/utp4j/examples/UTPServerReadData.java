@@ -14,7 +14,7 @@
  */
 package net.utp4j.examples;
 
-import net.utp4j.channels.UtpServerSocketChannel;
+
 import net.utp4j.channels.UtpSocketChannel;
 import net.utp4j.channels.futures.UtpAcceptFuture;
 import net.utp4j.channels.futures.UtpReadFuture;
@@ -33,7 +33,7 @@ public class UTPServerReadData {
     public static void main(String[] args) throws IOException, InterruptedException {
 
         UTPServer server = new UTPServer(new InetSocketAddress(13344));
-        server.start();
+
 
         UtpAcceptFuture acceptFuture = server.start();
         acceptFuture.block();

@@ -14,7 +14,7 @@
  */
 package net.utp4j.examples.configtest;
 
-import net.utp4j.channels.UtpServerSocketChannel;
+
 import net.utp4j.channels.UtpSocketChannel;
 import net.utp4j.channels.futures.UtpAcceptFuture;
 import net.utp4j.channels.futures.UtpReadFuture;
@@ -39,7 +39,7 @@ public class ConfigTestRead {
         ByteBuffer buffer = ByteBuffer.allocate(150000000);
         while (true) {
             UTPServer server = new UTPServer(new InetSocketAddress(13344));
-            server.start();
+
             UtpAcceptFuture acceptFuture = server.start();
             acceptFuture.block();
 

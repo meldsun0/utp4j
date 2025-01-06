@@ -1,6 +1,5 @@
 package net.utp4j.channels.impl;
 
-import net.utp4j.channels.UtpServerSocketChannel;
 import net.utp4j.channels.UtpSocketChannel;
 import net.utp4j.channels.UtpSocketState;
 import net.utp4j.channels.exception.CannotCloseServerException;
@@ -23,25 +22,22 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
 import java.util.Queue;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-public class UTPServer extends UtpServerSocketChannel implements UtpPacketRecievable {
+public class UTPServer  implements UtpPacketRecievable {
 
     private static final Logger LOG = LogManager.getLogger(UTPServer.class);
 
     private UtpRecieveRunnable listenRunnable;
     private final Queue<UtpAcceptFutureImpl> acceptQueue = new LinkedList<UtpAcceptFutureImpl>();
     private final Map<Integer, ConnectionIdTriplet> connectionIds = new HashMap<Integer, ConnectionIdTriplet>();
-
+    protected DatagramSocket socket;
 
     private AtomicBoolean listen = new AtomicBoolean(false);
     private final InetSocketAddress listenAddress;
 
-
     public UTPServer(InetSocketAddress listenAddress) {
         this.listenAddress = listenAddress;
-
     }
 
 
@@ -51,8 +47,8 @@ public class UTPServer extends UtpServerSocketChannel implements UtpPacketReciev
             return null ; //CompletableFuture.failedFuture(new IllegalStateException("Attempted to start an already started server listening on " + listenAddress));
         }
         this.socket = new DatagramSocket(this.listenAddress);
-        this.listenRunnable = new UtpRecieveRunnable(this.getSocket(), this);
-        Thread listenRunner = new Thread(this.listenRunnable, "listenRunnable_" + getSocket().getLocalPort());
+        this.listenRunnable = new UtpRecieveRunnable(this.socket, this);
+        Thread listenRunner = new Thread(this.listenRunnable, "listenRunnable_" + this.socket.getLocalPort());
         listenRunner.start();
 
         UtpAcceptFutureImpl future;
@@ -82,7 +78,7 @@ public class UTPServer extends UtpServerSocketChannel implements UtpPacketReciev
             UtpSocketChannelImpl utpChannel = null;
             try {
                 utpChannel = (UtpSocketChannelImpl) UtpSocketChannel.open();
-                utpChannel.setDgSocket(getSocket());
+                utpChannel.setDgSocket(this.socket);
                 utpChannel.recievePacket(packet);
                 utpChannel.setServer(this);
                 registered = registerChannel(utpChannel);
@@ -157,15 +153,16 @@ public class UTPServer extends UtpServerSocketChannel implements UtpPacketReciev
                 && channel.getState() != UtpSocketState.SYN_ACKING_FAILED;
     }
 
-    /**
-     * closes this server.
-     */
-    @Override
+
     public void close() {
-        if (connectionIds.isEmpty()) {
-            listenRunnable.graceFullInterrupt();
+        if (listen.compareAndSet(true, false)) {
+            LOG.info("Stopping UTP server listening on {}", listenAddress);
+            if (connectionIds.isEmpty()) {
+                    listenRunnable.graceFullInterrupt();
+
+            }
         } else {
-            throw new CannotCloseServerException(connectionIds.values());
+            LOG.warn("An attempt to stop already stopping/stopped UTP server");
         }
     }
 
