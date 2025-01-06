@@ -14,7 +14,7 @@
  */
 package net.utp4j.channels.impl.write;
 
-import net.utp4j.channels.impl.UtpSocketChannelImpl;
+import net.utp4j.channels.impl.UTPClient;
 import net.utp4j.channels.impl.UtpTimestampedPacketDTO;
 import net.utp4j.channels.impl.alg.UtpAlgorithm;
 import net.utp4j.data.MicroSecondsTimeStamp;
@@ -39,7 +39,7 @@ public class UtpWritingRunnable extends Thread implements Runnable {
 
     private final ByteBuffer buffer;
     private volatile boolean graceFullInterrupt;
-    private final UtpSocketChannelImpl channel;
+    private final UTPClient channel;
     private boolean isRunning = false;
     private final UtpAlgorithm algorithm;
     private IOException possibleException = null;
@@ -48,7 +48,7 @@ public class UtpWritingRunnable extends Thread implements Runnable {
 
     private final static Logger log = LoggerFactory.getLogger(UtpWritingRunnable.class);
 
-    public UtpWritingRunnable(UtpSocketChannelImpl channel, ByteBuffer buffer,
+    public UtpWritingRunnable(UTPClient channel, ByteBuffer buffer,
                               MicroSecondsTimeStamp timeStamper, UtpWriteFutureImpl future) {
         this.buffer = buffer;
         this.channel = channel;

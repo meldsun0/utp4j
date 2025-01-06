@@ -46,7 +46,7 @@ import static net.utp4j.data.UtpPacketUtils.*;
 import static net.utp4j.data.bytes.UnsignedTypesUtil.*;
 
 
-public class UtpSocketChannelImpl implements
+public class UTPClient implements
         UtpPacketRecievable {
 
 
@@ -85,7 +85,7 @@ public class UtpSocketChannelImpl implements
 
     /* logger */
     private static final Logger log = LoggerFactory
-            .getLogger(UtpSocketChannelImpl.class);
+            .getLogger(UTPClient.class);
 
     /* Current state of the socket */
     protected volatile UtpSocketState state = null;
@@ -114,14 +114,12 @@ public class UtpSocketChannelImpl implements
     private int eofPacket;
 
 
-    /**
-     * Opens a new Socket and binds it to any available port
-     *
-     * @return {@link UtpSocketChannel}
-     * @throws IOException see {@link DatagramSocket#DatagramSocket()}
-     */
-    public static UtpSocketChannelImpl open() throws IOException {
-        UtpSocketChannelImpl c = new UtpSocketChannelImpl();
+    public UTPClient(){
+
+    }
+
+    public static UTPClient open() throws IOException {
+        UTPClient c = new UTPClient();
         try {
             c.setDgSocket(new DatagramSocket());
             c.setState(CLOSED);

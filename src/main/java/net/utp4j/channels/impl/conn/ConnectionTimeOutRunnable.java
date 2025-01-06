@@ -14,7 +14,7 @@
  */
 package net.utp4j.channels.impl.conn;
 
-import net.utp4j.channels.impl.UtpSocketChannelImpl;
+import net.utp4j.channels.impl.UTPClient;
 import net.utp4j.data.UtpPacket;
 
 import java.util.concurrent.locks.ReentrantLock;
@@ -27,11 +27,11 @@ import java.util.concurrent.locks.ReentrantLock;
 public class ConnectionTimeOutRunnable implements Runnable {
 
     private final UtpPacket synPacket;
-    private final UtpSocketChannelImpl channel;
+    private final UTPClient channel;
     private final ReentrantLock lock;
 
     public ConnectionTimeOutRunnable(UtpPacket packet,
-                                     UtpSocketChannelImpl channel, ReentrantLock lock) {
+                                     UTPClient channel, ReentrantLock lock) {
         this.synPacket = packet;
         this.lock = lock;
         this.channel = channel;

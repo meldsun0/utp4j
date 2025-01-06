@@ -14,7 +14,7 @@
  */
 package net.utp4j.channels.exception;
 
-import net.utp4j.channels.impl.UtpSocketChannelImpl;
+import net.utp4j.channels.impl.UTPClient;
 import net.utp4j.channels.impl.recieve.ConnectionIdTriplet;
 
 import java.io.Serial;
@@ -28,7 +28,7 @@ import java.util.LinkedList;
  */
 public class CannotCloseServerException extends RuntimeException {
 
-    private final Collection<UtpSocketChannelImpl> openChannels = new LinkedList<>();
+    private final Collection<UTPClient> openChannels = new LinkedList<>();
 
     public CannotCloseServerException(Collection<ConnectionIdTriplet> values) {
         for (ConnectionIdTriplet connectionIdTriplet : values) {
@@ -39,7 +39,7 @@ public class CannotCloseServerException extends RuntimeException {
     /**
      * Returns a list of open channels.
      */
-    public Collection<UtpSocketChannelImpl> getOpenChannels() {
+    public Collection<UTPClient> getOpenChannels() {
         return openChannels;
     }
 

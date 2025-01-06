@@ -15,16 +15,15 @@
 package net.utp4j.examples.configtest;
 
 
-import net.utp4j.channels.futures.UtpAcceptFuture;
 import net.utp4j.channels.futures.UtpReadFuture;
 import net.utp4j.channels.impl.UTPServer;
-import net.utp4j.channels.impl.UtpSocketChannelImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
+import java.util.concurrent.ExecutionException;
 
 public class ConfigTestRead {
 
@@ -35,26 +34,22 @@ public class ConfigTestRead {
      * @throws IOException
      * @throws InterruptedException
      */
-    public static void main(String[] args) throws IOException, InterruptedException {
+    public static void main(String[] args) throws IOException, InterruptedException, ExecutionException {
         ByteBuffer buffer = ByteBuffer.allocate(150000000);
         while (true) {
             UTPServer server = new UTPServer(new InetSocketAddress(13344));
 
-            UtpAcceptFuture acceptFuture = server.start();
-            acceptFuture.block();
+            server.start();
 
-            UtpSocketChannelImpl channel = acceptFuture.getChannel();
-            UtpReadFuture readFuture = channel.read(buffer);
+
+            UtpReadFuture readFuture = server.read(buffer);
             readFuture.setListener(null);
             readFuture.block();
             log.debug("reading end");
-            channel.close();
             server.close();
             server = null;
-            channel = null;
             buffer.clear();
             readFuture = null;
-            acceptFuture = null;
             Thread.sleep(5000);
         }
 

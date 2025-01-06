@@ -16,7 +16,7 @@ package net.utp4j.examples.configtest;
 
 import net.utp4j.channels.futures.UtpConnectFuture;
 import net.utp4j.channels.futures.UtpWriteFuture;
-import net.utp4j.channels.impl.UtpSocketChannelImpl;
+import net.utp4j.channels.impl.UTPClient;
 import net.utp4j.data.MicroSecondsTimeStamp;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -71,7 +71,7 @@ public class ConfigTestWrite {
             } while (bytesRead != -1);
             log.debug("file read");
 
-            UtpSocketChannelImpl chanel = UtpSocketChannelImpl.open();
+            UTPClient chanel = UTPClient.open();
             int bytesToSend = buffer.position();
 
             if (waitOnManualInput) {

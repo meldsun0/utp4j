@@ -14,7 +14,7 @@
  */
 package net.utp4j.channels.impl.read;
 
-import net.utp4j.channels.impl.UtpSocketChannelImpl;
+import net.utp4j.channels.impl.UTPClient;
 import net.utp4j.channels.impl.UtpTimestampedPacketDTO;
 import net.utp4j.channels.impl.alg.UtpAlgConfiguration;
 import net.utp4j.data.MicroSecondsTimeStamp;
@@ -40,7 +40,7 @@ public class UtpReadingRunnable extends Thread implements Runnable {
     private static final int PACKET_DIFF_WARP = 50000;
     private IOException exp;
     private final ByteBuffer buffer;
-    private final UtpSocketChannelImpl channel;
+    private final UTPClient channel;
     private final SkippedPacketBuffer skippedBuffer = new SkippedPacketBuffer();
     private boolean exceptionOccured = false;
     private boolean graceFullInterrupt;
@@ -59,7 +59,7 @@ public class UtpReadingRunnable extends Thread implements Runnable {
 
     private static final Logger log = LoggerFactory.getLogger(UtpReadingRunnable.class);
 
-    public UtpReadingRunnable(UtpSocketChannelImpl channel, ByteBuffer buff, MicroSecondsTimeStamp timestamp, UtpReadFutureImpl future) {
+    public UtpReadingRunnable(UTPClient channel, ByteBuffer buff, MicroSecondsTimeStamp timestamp, UtpReadFutureImpl future) {
         this.channel = channel;
         this.buffer = buff;
         this.timeStamper = timestamp;

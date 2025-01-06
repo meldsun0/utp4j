@@ -16,7 +16,7 @@ package net.utp4j.examples;
 
 import net.utp4j.channels.futures.UtpConnectFuture;
 import net.utp4j.channels.futures.UtpReadFuture;
-import net.utp4j.channels.impl.UtpSocketChannelImpl;
+import net.utp4j.channels.impl.UTPClient;
 
 import java.io.IOException;
 import java.io.RandomAccessFile;
@@ -28,7 +28,7 @@ public class UTPClientSendData {
     public static void main(String[] args) throws IOException, InterruptedException {
         ByteBuffer RB = ByteBuffer.allocate(150000000);
         while (true) {
-            UtpSocketChannelImpl chanel = UtpSocketChannelImpl.open();
+            UTPClient chanel = UTPClient.open();
             UtpConnectFuture cFuture = chanel.connect(new InetSocketAddress("localhost", 13344));
             cFuture.block();
 

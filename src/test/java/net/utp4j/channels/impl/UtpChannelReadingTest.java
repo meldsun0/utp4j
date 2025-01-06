@@ -51,7 +51,7 @@ public class UtpChannelReadingTest {
         UtpAlgConfiguration.SKIP_PACKETS_UNTIL_ACK = 1;
 
         //mocking stuff
-        UtpSocketChannelImpl channel = new UtpSocketChannelImpl();
+        UTPClient channel = new UTPClient();
         channel.setState(UtpSocketState.CONNECTED);
         DatagramSocket socket = mock(DatagramSocket.class);
 

@@ -15,43 +15,40 @@
 package net.utp4j.examples;
 
 
-import net.utp4j.channels.futures.UtpAcceptFuture;
 import net.utp4j.channels.futures.UtpReadFuture;
 import net.utp4j.channels.futures.UtpWriteFuture;
 import net.utp4j.channels.impl.UTPServer;
-import net.utp4j.channels.impl.UtpSocketChannelImpl;
+import net.utp4j.channels.impl.UTPClient;
 
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+import java.util.concurrent.ExecutionException;
 
 public class UTPServerReadData {
 
-    public static void main(String[] args) throws IOException, InterruptedException {
+    public static void main(String[] args) throws IOException, InterruptedException, ExecutionException {
 
         UTPServer server = new UTPServer(new InetSocketAddress(13344));
 
 
-        UtpAcceptFuture acceptFuture = server.start();
-        acceptFuture.block();
+        server.start();
 
 
         System.out.println("Send data");
-        UtpSocketChannelImpl channel = acceptFuture.getChannel();
-        UtpWriteFuture writeFuture = channel.write( getDataToSend());
+        UtpWriteFuture writeFuture = server.write( getDataToSend());
         writeFuture.block();
         if (writeFuture.isSuccessfull()) {
             System.out.println("data send ok");
         }else{
             System.out.println("data send error");
         }
-        channel.close();
         server.close();
     }
 
-    public static void readData(UtpSocketChannelImpl channel) throws InterruptedException {
+    public static void readData(UTPClient channel) throws InterruptedException {
         ByteBuffer buffer = ByteBuffer.allocate(150000000);
         UtpReadFuture readFuture = channel.read(buffer);
         readFuture.setListener(new SaveFileListener(null));

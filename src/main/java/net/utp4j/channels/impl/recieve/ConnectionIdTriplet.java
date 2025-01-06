@@ -14,7 +14,7 @@
  */
 package net.utp4j.channels.impl.recieve;
 
-import net.utp4j.channels.impl.UtpSocketChannelImpl;
+import net.utp4j.channels.impl.UTPClient;
 
 /**
  * DTO to put channel and the connection id's in one class.
@@ -23,17 +23,17 @@ import net.utp4j.channels.impl.UtpSocketChannelImpl;
  */
 public class ConnectionIdTriplet {
 
-    private UtpSocketChannelImpl channel;
+    private UTPClient channel;
     //incomming connection ID
     private long inComming;
     //outgoing is incomming connection ID + 1 as specified
     private long outGoing;
 
-    public UtpSocketChannelImpl getChannel() {
+    public UTPClient getChannel() {
         return channel;
     }
 
-    public ConnectionIdTriplet(UtpSocketChannelImpl channel, long inComming, long outGoing) {
+    public ConnectionIdTriplet(UTPClient channel, long inComming, long outGoing) {
         this.channel = channel;
         this.inComming = inComming;
         this.outGoing = outGoing;
@@ -62,7 +62,7 @@ public class ConnectionIdTriplet {
         return hash;
     }
 
-    public void setChannel(UtpSocketChannelImpl channel) {
+    public void setChannel(UTPClient channel) {
         this.channel = channel;
     }
 
