@@ -32,12 +32,13 @@ import static net.utp4j.data.UtpPacketUtils.MAX_UTP_PACKET_LENGTH;
  */
 public class UtpRecieveRunnable extends Thread implements Runnable {
 
+    private final static Logger log = LoggerFactory.getLogger(UtpRecieveRunnable.class);
 
     private final DatagramSocket socket;
     private final UtpPacketRecievable packetReciever;
     private boolean graceFullInterrupt = false;
 
-    private final static Logger log = LoggerFactory.getLogger(UtpRecieveRunnable.class);
+
 
 
     public UtpRecieveRunnable(DatagramSocket socket, UtpPacketRecievable queueable) {

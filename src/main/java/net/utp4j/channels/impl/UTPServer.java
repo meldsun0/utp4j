@@ -22,13 +22,16 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
 import java.util.Queue;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-public class UTPServer  implements UtpPacketRecievable {
+import static net.utp4j.data.UtpPacketUtils.MAX_UDP_HEADER_LENGTH;
+import static net.utp4j.data.UtpPacketUtils.MAX_UTP_PACKET_LENGTH;
+
+public class UTPServer implements UtpPacketRecievable {
 
     private static final Logger LOG = LogManager.getLogger(UTPServer.class);
 
-    private UtpRecieveRunnable listenRunnable;
     private final Queue<UtpAcceptFutureImpl> acceptQueue = new LinkedList<UtpAcceptFutureImpl>();
     private final Map<Integer, ConnectionIdTriplet> connectionIds = new HashMap<Integer, ConnectionIdTriplet>();
     protected DatagramSocket socket;
@@ -40,16 +43,13 @@ public class UTPServer  implements UtpPacketRecievable {
         this.listenAddress = listenAddress;
     }
 
-
     public UtpAcceptFuture start() throws SocketException {
         LOG.info("Starting UTP server listening on {}", listenAddress);
         if (!listen.compareAndSet(false, true)) {
-            return null ; //CompletableFuture.failedFuture(new IllegalStateException("Attempted to start an already started server listening on " + listenAddress));
+            return null; //CompletableFuture.failedFuture(new IllegalStateException("Attempted to start an already started server listening on " + listenAddress));
         }
         this.socket = new DatagramSocket(this.listenAddress);
-        this.listenRunnable = new UtpRecieveRunnable(this.socket, this);
-        Thread listenRunner = new Thread(this.listenRunnable, "listenRunnable_" + this.socket.getLocalPort());
-        listenRunner.start();
+        this.startReading();
 
         UtpAcceptFutureImpl future;
         try {
@@ -63,6 +63,24 @@ public class UTPServer  implements UtpPacketRecievable {
 
         return null;
 
+    }
+
+
+    private void startReading() {
+        CompletableFuture.runAsync(() -> {
+            while (listen.get()) {
+                byte[] buffer = new byte[MAX_UDP_HEADER_LENGTH + MAX_UTP_PACKET_LENGTH];
+                DatagramPacket dgpkt = new DatagramPacket(buffer, buffer.length);
+                try {
+                    socket.receive(dgpkt);
+                    recievePacket(dgpkt);
+                } catch (IOException e) {
+                    break;
+                }
+
+
+            }
+        });
     }
 
     /*
@@ -158,8 +176,7 @@ public class UTPServer  implements UtpPacketRecievable {
         if (listen.compareAndSet(true, false)) {
             LOG.info("Stopping UTP server listening on {}", listenAddress);
             if (connectionIds.isEmpty()) {
-                    listenRunnable.graceFullInterrupt();
-
+                socket.close();
             }
         } else {
             LOG.warn("An attempt to stop already stopping/stopped UTP server");
