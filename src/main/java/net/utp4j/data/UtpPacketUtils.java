@@ -80,13 +80,14 @@ public class UtpPacketUtils {
      *
      * @return {@link UtpPacket}
      */
-    public static UtpPacket createSynPacket() {
-
+    public static UtpPacket createSynPacket(short connectionId, int utpTimestamp ) {
         UtpPacket pkt = new UtpPacket();
         pkt.setTypeVersion(SYN);
         pkt.setSequenceNumber(longToUbyte(1));
         byte[] pl = {1, 2, 3, 4, 5, 6};
         pkt.setPayload(pl);
+        pkt.setConnectionId(connectionId);
+        pkt.setTimestamp(utpTimestamp);
         return pkt;
     }
 

@@ -24,7 +24,7 @@ public class TestWrite {
         System.out.println("file read");
 
         UTPClient chanel = UTPClient.open();
-        UtpConnectFuture cFuture = chanel.connect(new InetSocketAddress("localhost", 13344), 333);
+        UtpConnectFuture cFuture = chanel.connect(new InetSocketAddress("localhost", 13345), 333);
         cFuture.block();
 
         UtpWriteFuture fut = chanel.write(buffer);

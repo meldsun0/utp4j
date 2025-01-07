@@ -3,7 +3,6 @@ package net.utp4j.channels.impl;
 import net.utp4j.channels.UtpSocketState;
 import net.utp4j.channels.futures.UtpWriteFuture;
 import net.utp4j.channels.impl.read.UtpReadFutureImpl;
-import net.utp4j.channels.impl.recieve.ConnectionIdTriplet;
 import net.utp4j.channels.impl.recieve.UtpPacketRecievable;
 import net.utp4j.data.UtpPacket;
 import net.utp4j.data.UtpPacketUtils;
@@ -29,7 +28,7 @@ public class UTPServer implements UtpPacketRecievable {
 
     private static final Logger LOG = LogManager.getLogger(UTPServer.class);
 
-    private final Map<Integer, ConnectionIdTriplet> connectionIds = new HashMap<Integer, ConnectionIdTriplet>();
+    private final Map<Integer, UTPClient> connectionIds = new HashMap<>();
     protected DatagramSocket socket;
 
     private AtomicBoolean listen = new AtomicBoolean(false);
@@ -85,19 +84,19 @@ public class UTPServer implements UtpPacketRecievable {
                 utpChannel.recievePacket(packet);
                 utpChannel.setServer(this);
 
-                registered = registerChannel(utpChannel);
+                if (isChannelRegistrationNecessary(utpChannel)) {
+                    connectionIds.put((int) (utpChannel.getConnectionIdRecieving() & 0xFFFF), utpChannel);
+                }else{
+                    utpChannel = null;
+                    this.initAcceptanceFuture.completeExceptionally(new RuntimeException("Something went wrong!"));
+                }
             } catch (IOException e) {
                 this.initAcceptanceFuture.completeExceptionally(new RuntimeException("Something went wrong!"));
-            }
-
-            /* Collision in Connection ids or failed to ack.
-             * Ignore Syn Packet and let other side handle the issue. */
-            if (!registered) {
-                utpChannel = null;
             }
             this.initAcceptanceFuture.complete(utpChannel);
         }
     }
+
 
     public UtpReadFutureImpl read(ByteBuffer dst) throws ExecutionException, InterruptedException {
         return this.initAcceptanceFuture.get().read(dst);
@@ -110,9 +109,9 @@ public class UTPServer implements UtpPacketRecievable {
         UtpPacket pkt = UtpPacketUtils.extractUtpPacket(packet);
         int connId = pkt.getConnectionId();
         connId = (connId & 0xFFFF) + 1;
-        ConnectionIdTriplet triplet = connectionIds.get(connId);
-        if (triplet != null) {
-            triplet.getChannel().recievePacket(packet);
+        UTPClient client = connectionIds.get(connId);
+        if (client != null) {
+            client.recievePacket(packet);
             return true;
         }
 
@@ -128,30 +127,15 @@ public class UTPServer implements UtpPacketRecievable {
             synRecieved(packet);
         } else {
             UtpPacket utpPacket = UtpPacketUtils.extractUtpPacket(packet);
-            ConnectionIdTriplet triplet = connectionIds.get(utpPacket.getConnectionId() & 0xFFFF);
-            if (triplet != null) {
-                triplet.getChannel().recievePacket(packet);
+            UTPClient client = connectionIds.get(utpPacket.getConnectionId() & 0xFFFF);
+            if (client != null) {
+                client.recievePacket(packet);
             }
         }
     }
 
 
-    /*
-     * registers a channel.
-     */
-    private boolean registerChannel(UTPClient channel) {
-        ConnectionIdTriplet triplet = new ConnectionIdTriplet(
-                channel, channel.getConnectionIdRecieving(), channel.getConnectionIdsending());
 
-        if (isChannelRegistrationNecessary(channel)) {
-            connectionIds.put((int) (channel.getConnectionIdRecieving() & 0xFFFF), triplet);
-            return true;
-        }
-
-        /* Connection id collision found or not been able to ack.
-         *  ignore this syn packet */
-        return false;
-    }
 
     /*
      * true if channel reg. is required.
