@@ -30,15 +30,11 @@ public class UtpWriteFutureImpl extends UtpWriteFuture {
         super();
     }
 
-    public void finished(IOException exp, int bytesWritten) {
-        this.setBytesSend(bytesWritten);
+    public void finished(IOException exp) {
         this.exception = exp;
         isDone = true;
         semaphore.release();
     }
 
-    public void setBytesSend(int position) {
-        bytesWritten = position;
-    }
 
 }

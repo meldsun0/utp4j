@@ -25,13 +25,6 @@ public abstract class UtpWriteFuture extends UtpBlockableFuture {
         super();
     }
 
-    protected volatile int bytesWritten;
 
-    /**
-     * @return number of bytes that was written.
-     */
-    public int getBytesSend() {
-        return bytesWritten;
-    }
 
 }

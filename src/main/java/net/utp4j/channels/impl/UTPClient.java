@@ -113,7 +113,7 @@ public class UTPClient implements UtpPacketRecievable {
                 UtpPacket synPacket = UtpPacketUtils.createSynPacket(longToUshort(getConnectionIdRecievingIncoming()), timeStamper.utpTimeStamp());
 
                 sendPacket(UtpPacket.createDatagramPacket(synPacket, this.remoteAddressWhichThisSocketIsConnectedTo));
-                setState(SYN_SENT);
+                this.state = SYN_SENT;
                 printState("[Syn send] ");
 
                 incrementSequenceNumber();
@@ -164,7 +164,7 @@ public class UTPClient implements UtpPacketRecievable {
      * to happen Seq# == 0 not possible.
      */
     protected void incrementSequenceNumber() {
-        int seqNumber = getCurrentSequenceNumber() + 1;
+        int seqNumber = currentSequenceNumber + 1;
         if (seqNumber > MAX_USHORT) {
             seqNumber = 1;
         }
@@ -511,14 +511,11 @@ public class UTPClient implements UtpPacketRecievable {
      * Start a connection time out counter which will frequently resend the syn packet.
      */
     protected void startConnectionTimeOutCounter(UtpPacket synPacket) {
-        retryConnectionTimeScheduler = Executors
-                .newSingleThreadScheduledExecutor();
-        ConnectionTimeOutRunnable runnable = new ConnectionTimeOutRunnable(
-                synPacket, this, stateLock);
+        retryConnectionTimeScheduler = Executors.newSingleThreadScheduledExecutor();
+        ConnectionTimeOutRunnable runnable = new ConnectionTimeOutRunnable(synPacket, this, stateLock);
         LOG.debug("starting scheduler");
         // retryConnectionTimeScheduler.schedule(runnable, 2, TimeUnit.SECONDS);
-        retryConnectionTimeScheduler.scheduleWithFixedDelay(runnable,
-                UtpAlgConfiguration.CONNECTION_ATTEMPT_INTERVALL_MILLIS,
+        retryConnectionTimeScheduler.scheduleWithFixedDelay(runnable, UtpAlgConfiguration.CONNECTION_ATTEMPT_INTERVALL_MILLIS,
                 UtpAlgConfiguration.CONNECTION_ATTEMPT_INTERVALL_MILLIS,
                 TimeUnit.MILLISECONDS);
     }

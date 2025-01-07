@@ -68,6 +68,7 @@ public class UtpWritingRunnable extends Thread implements Runnable {
         boolean exceptionOccured = false;
         buffer.flip();
         int durchgang = 0;
+        int bytesWritten;
         while (continueSending()) {
             try {
                 if (!checkForAcks()) {
@@ -123,7 +124,7 @@ public class UtpWritingRunnable extends Thread implements Runnable {
 //				}
 //				finSend = true;
 //			}
-            uptadeFuture();
+
             durchgang++;
             if (durchgang % 1000 == 0) {
                 log.debug("buffer position: " + buffer.position() + " buffer limit: " + buffer.limit());
@@ -135,15 +136,13 @@ public class UtpWritingRunnable extends Thread implements Runnable {
         }
         isRunning = false;
         algorithm.end(buffer.position(), !exceptionOccured);
-        future.finished(possibleExp, buffer.position());
+
         log.debug("WRITER OUT");
         channel.removeWriter();
+
+        future.finished(possibleExp);
     }
 
-    private void uptadeFuture() {
-        future.setBytesSend(buffer.position());
-
-    }
 
 
     private boolean checkForAcks() {
