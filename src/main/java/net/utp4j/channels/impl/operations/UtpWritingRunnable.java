@@ -66,16 +66,20 @@ public class UtpWritingRunnable extends Thread implements Runnable {
         int bytesWritten;
         while (continueSending()) {
             try {
-                if (!checkForAcks()) {
+                if (!processAcknowledgements()) {
                     LOG.debug("Graceful interrupt due to lack of acknowledgements.");
                     break;
                 }
+                resendPendingPackets();
 
-                Queue<DatagramPacket> packetsToResend = algorithm.getPacketsToResend();
-                for (DatagramPacket datagramPacket : packetsToResend) {
-                    datagramPacket.setSocketAddress(channel.getRemoteAdress());
-                    channel.sendPacket(datagramPacket);
+                if (algorithm.isTimedOut()) {
+                    LOG.debug("Timed out. Stopping transmission.");
+                    break;
                 }
+
+
+
+
 
             } catch (IOException exp) {
                 exp.printStackTrace();
@@ -84,16 +88,10 @@ public class UtpWritingRunnable extends Thread implements Runnable {
                 exceptionOccured = true;
                 break;
             }
-            if (algorithm.isTimedOut()) {
-                graceFullInterrupt = true;
-                possibleExp = new IOException("timed out");
-                LOG.debug("timed out");
-                exceptionOccured = true;
-            }
-//			if(!checkForAcks()) {
-//				graceFullInterrupt = true;
-//				break;
-//			}
+
+
+
+
             while (algorithm.canSendNextPacket() && !exceptionOccured && !graceFullInterrupt && buffer.hasRemaining()) {
                 try {
                     channel.sendPacket(getNextPacket());
@@ -139,8 +137,15 @@ public class UtpWritingRunnable extends Thread implements Runnable {
     }
 
 
+    private void resendPendingPackets() throws IOException {
+        Queue<DatagramPacket> packetsToResend = algorithm.getPacketsToResend();
+        for (DatagramPacket packet : packetsToResend) {
+            packet.setSocketAddress(channel.getRemoteAdress());
+            channel.sendPacket(packet);
+        }
+    }
 
-    private boolean checkForAcks() {
+    private boolean processAcknowledgements(){
         BlockingQueue<UtpTimestampedPacketDTO> packetQueue = channel.getDataGramQueue();
         long waitingTimeMicros = algorithm.getWaitingTimeMicroSeconds();
         try {
