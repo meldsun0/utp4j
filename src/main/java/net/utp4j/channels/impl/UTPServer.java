@@ -76,13 +76,8 @@ public class UTPServer implements UtpPacketRecievable {
             return;
         }
         if (packet != null ) {
-            boolean registered = false;
-            UTPClient utpChannel = null;
-            try {
-                utpChannel =  UTPClient.open();
-                utpChannel.setDgSocket(this.socket);
+                UTPClient utpChannel = new UTPClient(this.socket, this);
                 utpChannel.recievePacket(packet);
-                utpChannel.setServer(this);
 
                 if (isChannelRegistrationNecessary(utpChannel)) {
                     connectionIds.put((int) (utpChannel.getConnectionIdRecieving() & 0xFFFF), utpChannel);
@@ -90,21 +85,14 @@ public class UTPServer implements UtpPacketRecievable {
                     utpChannel = null;
                     this.initAcceptanceFuture.completeExceptionally(new RuntimeException("Something went wrong!"));
                 }
-            } catch (IOException e) {
-                this.initAcceptanceFuture.completeExceptionally(new RuntimeException("Something went wrong!"));
-            }
             this.initAcceptanceFuture.complete(utpChannel);
         }
     }
-
 
     public UtpReadFutureImpl read(ByteBuffer dst) throws ExecutionException, InterruptedException {
         return this.initAcceptanceFuture.get().read(dst);
     }
 
-    /*
-     * handles double syn....
-     */
     private boolean handleDoubleSyn(DatagramPacket packet) {
         UtpPacket pkt = UtpPacketUtils.extractUtpPacket(packet);
         int connId = pkt.getConnectionId();
@@ -118,9 +106,6 @@ public class UTPServer implements UtpPacketRecievable {
         return false;
     }
 
-    /*
-     * handles the recieving of a pkt. if is a syn packet, the server takes care of it, otherwise it will be passed to the channel.
-     */
     @Override
     public void recievePacket(DatagramPacket packet) {
         if (UtpPacketUtils.isSynPkt(packet)) {
@@ -134,17 +119,10 @@ public class UTPServer implements UtpPacketRecievable {
         }
     }
 
-
-
-
-    /*
-     * true if channel reg. is required.
-     */
     private boolean isChannelRegistrationNecessary(UTPClient channel) {
         return connectionIds.get(channel.getConnectionIdRecieving()) == null
                 && channel.getState() != UtpSocketState.SYN_ACKING_FAILED;
     }
-
 
     public void close() throws ExecutionException, InterruptedException {
         if (listen.compareAndSet(true, false)) {
@@ -158,11 +136,6 @@ public class UTPServer implements UtpPacketRecievable {
         }
     }
 
-    /**
-     * Unregisters the channel.
-     *
-     * @param UTPClient
-     */
     public void unregister(UTPClient UTPClient) {
         connectionIds.remove((int) UTPClient.getConnectionIdRecieving() & 0xFFFF);
     }

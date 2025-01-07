@@ -114,6 +114,12 @@ public class UTPClient implements
 
     }
 
+    public UTPClient(DatagramSocket socket, UTPServer server){
+        this.state = CLOSED;
+        this.dgSocket = socket;
+        this.server = server;
+    }
+
     public static UTPClient open() throws IOException {
         UTPClient c = new UTPClient();
         try {
@@ -182,29 +188,6 @@ public class UTPClient implements
         return getState() == UtpSocketState.CONNECTED;
     }
 
-    public long getConnectionIdRecieving() {
-        return connectionIdRecieving;
-    }
-
-    public UtpSocketState getState() {
-        return state;
-    }
-
-    public SocketAddress getRemoteAdress() {
-        return remoteAddress;
-    }
-
-    public int getAckNumber() {
-        return ackNumber;
-    }
-
-    public int getSequenceNumber() {
-        return sequenceNumber;
-    }
-
-    public DatagramSocket getDgSocket() {
-        return dgSocket;
-    }
 
 
     /* debug method to print id's, seq# and ack# */
@@ -566,15 +549,7 @@ public class UTPClient implements
         this.dgSocket = dgSocket;
     }
 
-    public void setAckNumber(int ackNumber) {
-//		log.debug("ack nubmer set to: " + ackNumber);
-        this.ackNumber = ackNumber;
-    }
 
-    public void setServer(UTPServer UTPServer) {
-        this.server = UTPServer;
-
-    }
 
 
     public void returnFromReading() {
@@ -585,9 +560,7 @@ public class UTPClient implements
         }
     }
 
-    public void removeWriter() {
-        writer = null;
-    }
+
 
     /*
      * Start a connection time out counter which will frequently resend the syn packet.
@@ -653,10 +626,7 @@ public class UTPClient implements
 
     }
 
-    public void setTimetamper(MicroSecondsTimeStamp stamp) {
-        this.timeStamper = stamp;
 
-    }
 
     /*
      * Creates an ACK packet.
@@ -688,7 +658,63 @@ public class UTPClient implements
         return pkt;
     }
 
+
+
+
+    /**
+     *
+     *
+     *
+     *
+     *
+     * */
+
+
+    public long getConnectionIdRecieving() {
+        return connectionIdRecieving;
+    }
+
+    public UtpSocketState getState() {
+        return state;
+    }
+
+    public SocketAddress getRemoteAdress() {
+        return remoteAddress;
+    }
+
+    public int getAckNumber() {
+        return ackNumber;
+    }
+
+    public int getSequenceNumber() {
+        return sequenceNumber;
+    }
+
+    public DatagramSocket getDgSocket() {
+        return dgSocket;
+    }
+
+    public void setTimetamper(MicroSecondsTimeStamp stamp) {
+        this.timeStamper = stamp;
+
+    }
+
+    public void setAckNumber(int ackNumber) {
+//		log.debug("ack nubmer set to: " + ackNumber);
+        this.ackNumber = ackNumber;
+    }
+
+    public void setServer(UTPServer UTPServer) {
+        this.server = UTPServer;
+
+    }
+
+
     public void setRemoteAddress(InetSocketAddress localhost) {
         this.remoteAddress = localhost;
+    }
+
+    public void removeWriter() {
+        writer = null;
     }
 }
