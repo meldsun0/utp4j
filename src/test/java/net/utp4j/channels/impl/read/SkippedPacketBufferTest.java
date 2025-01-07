@@ -15,6 +15,7 @@
 package net.utp4j.channels.impl.read;
 
 import net.utp4j.channels.impl.UtpTimestampedPacketDTO;
+import net.utp4j.channels.impl.operations.SkippedPacketBuffer;
 import net.utp4j.data.SelectiveAckHeaderExtension;
 import net.utp4j.data.UtpPacket;
 import org.junit.jupiter.api.Test;

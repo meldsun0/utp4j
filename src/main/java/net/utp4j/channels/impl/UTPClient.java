@@ -17,9 +17,9 @@ package net.utp4j.channels.impl;
 import net.utp4j.channels.UtpSocketState;
 import net.utp4j.channels.impl.alg.UtpAlgConfiguration;
 import net.utp4j.channels.impl.conn.ConnectionTimeOutRunnable;
-import net.utp4j.channels.impl.read.UtpReadingRunnable;
-import net.utp4j.channels.impl.recieve.UtpPacketRecievable;
-import net.utp4j.channels.impl.write.UtpWritingRunnable;
+import net.utp4j.channels.impl.operations.UtpReadingRunnable;
+import net.utp4j.channels.impl.operations.UtpPacketRecievable;
+import net.utp4j.channels.impl.operations.UtpWritingRunnable;
 import net.utp4j.data.*;
 import org.apache.logging.log4j.LogManager;
 

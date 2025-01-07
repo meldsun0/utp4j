@@ -12,7 +12,7 @@
  * License for the specific language governing permissions and limitations under
  * the License.
  */
-package net.utp4j.channels.impl.write;
+package net.utp4j.channels.impl.operations;
 
 import net.utp4j.channels.impl.UTPClient;
 import net.utp4j.channels.impl.UtpTimestampedPacketDTO;

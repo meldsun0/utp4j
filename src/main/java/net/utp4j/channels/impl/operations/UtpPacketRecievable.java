@@ -1,4 +1,4 @@
-package net.utp4j.channels.impl.recieve;
+package net.utp4j.channels.impl.operations;
 
 import java.net.DatagramPacket;
 

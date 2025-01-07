@@ -1,7 +1,7 @@
 package net.utp4j.channels.impl;
 
 import net.utp4j.channels.UtpSocketState;
-import net.utp4j.channels.impl.recieve.UtpPacketRecievable;
+import net.utp4j.channels.impl.operations.UtpPacketRecievable;
 import net.utp4j.data.UtpPacket;
 import net.utp4j.data.UtpPacketUtils;
 import org.apache.logging.log4j.LogManager;
