@@ -111,7 +111,7 @@ public class UTPClient implements
 
 
     public UTPClient(){
-
+        this.state = CLOSED;
     }
 
     public UTPClient(DatagramSocket socket, UTPServer server){
@@ -120,24 +120,9 @@ public class UTPClient implements
         this.server = server;
     }
 
-    public static UTPClient open() throws IOException {
-        UTPClient c = new UTPClient();
-        try {
-            c.setDgSocket(new DatagramSocket());
-            c.setState(CLOSED);
-        } catch (IOException exp) {
-            throw new IOException("Could not open UtpSocketChannel: "
-                    + exp.getMessage());
-        }
-        return c;
-    }
 
-    /**
-     * Connects this Socket to the specified address
-     *
-     * @param address
-     * @return {@link UtpConnectFuture}
-     */
+
+
     public UtpConnectFuture connect(SocketAddress address, long connectionId) {
         stateLock.lock();
         try {
@@ -148,6 +133,7 @@ public class UTPClient implements
                 return null;
             }
             try {
+                this.setDgSocket(new DatagramSocket());
                 reciever = new UtpRecieveRunnable(getDgSocket(), this);
                 reciever.start();
 

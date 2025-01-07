@@ -23,7 +23,7 @@ public class TestWrite {
         } while (bytesRead != -1);
         System.out.println("file read");
 
-        UTPClient chanel = UTPClient.open();
+        UTPClient chanel = new UTPClient();
         UtpConnectFuture cFuture = chanel.connect(new InetSocketAddress("localhost", 13345), 333);
         cFuture.block();
 

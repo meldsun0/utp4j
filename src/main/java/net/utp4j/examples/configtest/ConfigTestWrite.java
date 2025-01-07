@@ -71,7 +71,7 @@ public class ConfigTestWrite {
             } while (bytesRead != -1);
             log.debug("file read");
 
-            UTPClient chanel = UTPClient.open();
+            UTPClient chanel = new UTPClient();
             int bytesToSend = buffer.position();
 
             if (waitOnManualInput) {
