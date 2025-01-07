@@ -12,7 +12,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 
-
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.nio.ByteBuffer;
@@ -40,7 +39,7 @@ public class UtpWritingRunnable extends Thread implements Runnable {
     private static final Logger LOG = LogManager.getLogger(UtpWritingRunnable.class);
 
     public UtpWritingRunnable(UTPClient channel, ByteBuffer buffer,
-                              MicroSecondsTimeStamp timeStamper, CompletableFuture<Void>  writerFuture) {
+                              MicroSecondsTimeStamp timeStamper, CompletableFuture<Void> writerFuture) {
         this.buffer = buffer;
         this.channel = channel;
         this.timeStamper = timeStamper;
@@ -56,16 +55,12 @@ public class UtpWritingRunnable extends Thread implements Runnable {
 
     @Override
     public void run() {
-        initializeAlgorithm();
-
-        isRunning = true;
-        IOException possibleExp = null;
-        boolean exceptionOccured = false;
-        buffer.flip();
-        int durchgang = 0;
-        int bytesWritten;
-        while (continueSending()) {
-            try {
+        boolean successfull = true;
+        try {
+            initializeAlgorithm();
+            buffer.flip();
+            isRunning = true;
+            while (continueSending()) {
                 if (!processAcknowledgements()) {
                     LOG.debug("Graceful interrupt due to lack of acknowledgements.");
                     break;
@@ -76,66 +71,35 @@ public class UtpWritingRunnable extends Thread implements Runnable {
                     LOG.debug("Timed out. Stopping transmission.");
                     break;
                 }
-
-
-
-
-
-            } catch (IOException exp) {
-                exp.printStackTrace();
-                graceFullInterrupt = true;
-                possibleExp = exp;
-                exceptionOccured = true;
-                break;
+                sendNextPackets();
             }
-
-
-
-
-            while (algorithm.canSendNextPacket() && !exceptionOccured && !graceFullInterrupt && buffer.hasRemaining()) {
-                try {
-                    channel.sendPacket(getNextPacket());
-                } catch (IOException exp) {
-                    exp.printStackTrace();
-                    graceFullInterrupt = true;
-                    possibleExp = exp;
-                    exceptionOccured = true;
-                    break;
-                }
-            }
-//			if (!buffer.hasRemaining() && !finSend) {
-//				UtpPacket fin = channel.getFinPacket();
-//				log.debug("Sending FIN");
-//				try {
-//					channel.finalizeConnection(fin);
-//					algorithm.markFinOnfly(fin);
-//				} catch (IOException exp) {
-//					exp.printStackTrace();
-//					graceFullInterrupt = true;
-//					possibleExp = exp;
-//					exceptionOccured = true;
-//				}
-//				finSend = true;
-//			}
-
-            durchgang++;
-            if (durchgang % 1000 == 0) {
-                LOG.debug("buffer position: " + buffer.position() + " buffer limit: " + buffer.limit());
-            }
+        } catch (IOException exp) {
+            successfull = false;
+            LOG.debug("Something went wrong!");
+        } finally {
+            finalizeTransmission(successfull);
         }
-
-        if (possibleExp != null) {
-            exceptionOccured(possibleExp);
-        }
-        isRunning = false;
-        algorithm.end(buffer.position(), !exceptionOccured);
-
-        LOG.debug("WRITER OUT");
-        channel.removeWriter();
-
-        writerFuture.complete(null);
     }
 
+
+    private void finalizeTransmission(boolean successful) {
+        isRunning = false;
+        algorithm.end(buffer.position(), successful);
+        LOG.debug("Transmission complete.");
+        channel.removeWriter();
+        if (successful) {
+            writerFuture.complete(null);
+        } else {
+            writerFuture.completeExceptionally(new RuntimeException("Something went wrong!"));
+        }
+    }
+
+    private void sendNextPackets() throws IOException {
+        while (algorithm.canSendNextPacket() && buffer.hasRemaining()) {
+            DatagramPacket nextPacket = getNextPacket();
+            channel.sendPacket(nextPacket);
+        }
+    }
 
     private void resendPendingPackets() throws IOException {
         Queue<DatagramPacket> packetsToResend = algorithm.getPacketsToResend();
@@ -145,7 +109,7 @@ public class UtpWritingRunnable extends Thread implements Runnable {
         }
     }
 
-    private boolean processAcknowledgements(){
+    private boolean processAcknowledgements() {
         BlockingQueue<UtpTimestampedPacketDTO> packetQueue = channel.getDataGramQueue();
         long waitingTimeMicros = algorithm.getWaitingTimeMicroSeconds();
         try {
@@ -160,9 +124,6 @@ public class UtpWritingRunnable extends Thread implements Runnable {
             return false;
         }
     }
-
-
-
 
 
     private DatagramPacket getNextPacket() throws IOException {
@@ -191,10 +152,6 @@ public class UtpWritingRunnable extends Thread implements Runnable {
         return udpPacket;
     }
 
-
-    private void exceptionOccured(IOException exp) {
-        possibleException = exp;
-    }
 
     public boolean hasExceptionOccured() {
         return possibleException != null;
@@ -227,3 +184,19 @@ public class UtpWritingRunnable extends Thread implements Runnable {
         return isRunning;
     }
 }
+
+/*
+*
+* on run
+* //			if (!buffer.hasRemaining() && !finSend) {
+//				UtpPacket fin = channel.getFinPacket();
+//				log.debug("Sending FIN");
+//				try {
+//					channel.finalizeConnection(fin);
+//					algorithm.markFinOnfly(fin);
+//				} catch (IOException exp) {
+//
+//				}
+//				finSend = true;
+//			}
+* */
