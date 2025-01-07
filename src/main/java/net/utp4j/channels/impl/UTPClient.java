@@ -15,13 +15,10 @@
 package net.utp4j.channels.impl;
 
 import net.utp4j.channels.UtpSocketState;
-import net.utp4j.channels.futures.UtpWriteFuture;
 import net.utp4j.channels.impl.alg.UtpAlgConfiguration;
 import net.utp4j.channels.impl.conn.ConnectionTimeOutRunnable;
-import net.utp4j.channels.impl.read.UtpReadFutureImpl;
 import net.utp4j.channels.impl.read.UtpReadingRunnable;
 import net.utp4j.channels.impl.recieve.UtpPacketRecievable;
-import net.utp4j.channels.impl.write.UtpWriteFutureImpl;
 import net.utp4j.channels.impl.write.UtpWritingRunnable;
 import net.utp4j.data.*;
 import org.apache.logging.log4j.LogManager;
@@ -78,8 +75,6 @@ public class UTPClient implements UtpPacketRecievable {
     private CompletableFuture<Void> incomingConnectionFuture;
     private CompletableFuture<Void> connection;
 
-    private CompletableFuture<Void> writerFuture;
-
     private static final org.apache.logging.log4j.Logger LOG = LogManager.getLogger(UTPClient.class);
 
     public UTPClient() {
@@ -126,7 +121,6 @@ public class UTPClient implements UtpPacketRecievable {
         } finally {
             stateLock.unlock();
         }
-
         return connection;
     }
 
@@ -370,10 +364,17 @@ public class UTPClient implements UtpPacketRecievable {
     }
 
     public CompletableFuture<Void> write(ByteBuffer src) {
-        this.writerFuture = new CompletableFuture<Void>();
+        CompletableFuture<Void> writerFuture = new CompletableFuture<Void>();
         writer = new UtpWritingRunnable(this, src, timeStamper, writerFuture);
         writer.start();
-        return this.writerFuture;
+        return writerFuture;
+    }
+
+    public CompletableFuture<Void> read(ByteBuffer dst) {
+        CompletableFuture<Void> readFuture = new CompletableFuture<Void>();
+        reader = new UtpReadingRunnable(this, dst, timeStamper, readFuture);
+        reader.start();
+        return readFuture;
     }
 
     public BlockingQueue<UtpTimestampedPacketDTO> getDataGramQueue() {
@@ -400,17 +401,7 @@ public class UTPClient implements UtpPacketRecievable {
         return fin;
     }
 
-    public UtpReadFutureImpl read(ByteBuffer dst) {
-        UtpReadFutureImpl readFuture = null;
-        try {
-            readFuture = new UtpReadFutureImpl();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-        reader = new UtpReadingRunnable(this, dst, timeStamper, readFuture);
-        reader.start();
-        return readFuture;
-    }
+
 
     /**
      * Creates an Selective Ack packet

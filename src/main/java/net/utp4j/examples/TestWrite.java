@@ -1,6 +1,5 @@
 package net.utp4j.examples;
 
-import net.utp4j.channels.futures.UtpWriteFuture;
 import net.utp4j.channels.impl.UTPClient;
 
 import java.io.IOException;

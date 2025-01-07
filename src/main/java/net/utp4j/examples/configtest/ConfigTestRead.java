@@ -15,7 +15,6 @@
 package net.utp4j.examples.configtest;
 
 
-import net.utp4j.channels.futures.UtpReadFuture;
 import net.utp4j.channels.impl.UTPServer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,6 +22,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
 public class ConfigTestRead {
@@ -42,9 +42,8 @@ public class ConfigTestRead {
             server.start();
 
 
-            UtpReadFuture readFuture = server.read(buffer);
-            readFuture.setListener(null);
-            readFuture.block();
+            CompletableFuture<Void> readFuture = server.read(buffer);
+            readFuture.get();
             log.debug("reading end");
             server.close();
             server = null;

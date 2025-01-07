@@ -1,8 +1,6 @@
 package net.utp4j.channels.impl;
 
 import net.utp4j.channels.UtpSocketState;
-import net.utp4j.channels.futures.UtpWriteFuture;
-import net.utp4j.channels.impl.read.UtpReadFutureImpl;
 import net.utp4j.channels.impl.recieve.UtpPacketRecievable;
 import net.utp4j.data.UtpPacket;
 import net.utp4j.data.UtpPacketUtils;
@@ -88,7 +86,7 @@ public class UTPServer implements UtpPacketRecievable {
         }
     }
 
-    public UtpReadFutureImpl read(ByteBuffer dst) throws ExecutionException, InterruptedException {
+    public CompletableFuture<Void> read(ByteBuffer dst) throws ExecutionException, InterruptedException {
         return this.initAcceptanceFuture.get().read(dst);
     }
 

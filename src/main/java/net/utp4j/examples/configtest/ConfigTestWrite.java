@@ -14,7 +14,6 @@
  */
 package net.utp4j.examples.configtest;
 
-import net.utp4j.channels.futures.UtpWriteFuture;
 import net.utp4j.channels.impl.UTPClient;
 import net.utp4j.data.MicroSecondsTimeStamp;
 import org.slf4j.Logger;

@@ -28,6 +28,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Queue;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -49,7 +50,9 @@ public class UtpReadingRunnable extends Thread implements Runnable {
     private long totalPayloadLength = 0;
     private long lastPacketTimestamp;
     private int lastPayloadLength;
-    private final UtpReadFutureImpl readFuture;
+
+    private final CompletableFuture<Void> readFuture;
+
     private long nowtimeStamp;
     private long lastPackedRecieved;
     private final long startReadingTimeStamp;
@@ -59,11 +62,12 @@ public class UtpReadingRunnable extends Thread implements Runnable {
 
     private static final Logger log = LoggerFactory.getLogger(UtpReadingRunnable.class);
 
-    public UtpReadingRunnable(UTPClient channel, ByteBuffer buff, MicroSecondsTimeStamp timestamp, UtpReadFutureImpl future) {
+    public UtpReadingRunnable(UTPClient channel, ByteBuffer buff, MicroSecondsTimeStamp timestamp,
+                              CompletableFuture<Void> readFuture) {
         this.channel = channel;
         this.buffer = buff;
         this.timeStamper = timestamp;
-        this.readFuture = future;
+        this.readFuture = readFuture;
         lastPayloadLength = UtpAlgConfiguration.MAX_PACKET_SIZE;
         this.startReadingTimeStamp = timestamp.timeStamp();
     }
@@ -136,7 +140,7 @@ public class UtpReadingRunnable extends Thread implements Runnable {
             }
         }
         isRunning = false;
-        readFuture.finished(exp, buffer);
+        readFuture.complete(null);
 
 
         log.debug("Buffer position: " + buffer.position() + " buffer limit: " + buffer.limit());
