@@ -71,23 +71,14 @@ public class UTPServer implements UtpPacketRecievable {
             return;
         }
         if (packet != null ) {
-            try {
-                UTPClient utpChannel =  UTPClient.open();
-                utpChannel.setDgSocket(this.socket);
+                UTPClient utpChannel =  new UTPClient(this.socket, this);
                 utpChannel.recievePacket(packet);
-                utpChannel.setServer(this);
-
                 if (isChannelRegistrationNecessary(utpChannel)) {
                     connectionIds.put((int) (utpChannel.getConnectionIdRecieving() & 0xFFFF), utpChannel);
                     this.initAcceptanceFuture.complete(utpChannel);
                 }else{
                     this.initAcceptanceFuture.completeExceptionally(new RuntimeException("Something went wrong!"));
                 }
-
-            } catch (IOException e) {
-                this.initAcceptanceFuture.completeExceptionally(new RuntimeException("Something went wrong!"));
-            }
-
         }
     }
 

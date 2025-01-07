@@ -67,12 +67,7 @@ public class UTPClient implements
     /* reference to the underlying UDP Socket */
     protected DatagramSocket dgSocket;
 
-    /*
-     * Connection Future Object - need to hold a reference here i case
-     * connection the initial connection attempt fails. So it will be updates
-     * once the reattempts success.
-     */
-    protected UtpConnectFutureImpl connectFuture = null;
+
 
     /* lock for the socket state* */
     protected final ReentrantLock stateLock = new ReentrantLock();
@@ -110,28 +105,31 @@ public class UTPClient implements
 
     public UTPClient(){
         this.initAcceptanceFuture = new CompletableFuture<>();
+        this.state = CLOSED;
     }
 
-    public static UTPClient open() throws IOException {
-        UTPClient c = new UTPClient();
-        try {
-            c.setDgSocket(new DatagramSocket());
-            c.setState(CLOSED);
-        } catch (IOException exp) {
-            throw new IOException("Could not open UtpSocketChannel: "
-                    + exp.getMessage());
-        }
-        return c;
+    public UTPClient(DatagramSocket socket){
+        this.initAcceptanceFuture = new CompletableFuture<>();
+        this.state = CLOSED;
+        this.dgSocket = socket;
     }
 
+    public UTPClient(DatagramSocket socket, UTPServer server){
+        this.initAcceptanceFuture = new CompletableFuture<>();
+        this.state = CLOSED;
+        this.dgSocket = socket;
+        this.server = server;
+    }
     public void connect(SocketAddress address, long connectionId) {
         LOG.info("Starting UTP Client connecting to {}", connectionId);
         if (!listen.compareAndSet(false, true)) {
 
         }
         stateLock.lock();
+
             try {
-                CompletableFuture.runAsync(() -> {
+                this.dgSocket =  new DatagramSocket();
+                        CompletableFuture.runAsync(() -> {
                         while (listen.get()) {
                             byte[] buffer = new byte[MAX_UDP_HEADER_LENGTH + MAX_UTP_PACKET_LENGTH];
                             DatagramPacket dgpkt = new DatagramPacket(buffer, buffer.length);
@@ -566,15 +564,7 @@ public class UTPClient implements
         }
     }
 
-    public void setDgSocket(DatagramSocket dgSocket) {
-        if (this.dgSocket != null) {
-            this.dgSocket.close();
-        }
-        this.dgSocket = dgSocket;
-    }
-
     public void setAckNumber(int ackNumber) {
-//		log.debug("ack nubmer set to: " + ackNumber);
         this.ackNumber = ackNumber;
     }
 
@@ -625,8 +615,7 @@ public class UTPClient implements
         setState(CLOSED);
         retryConnectionTimeScheduler.shutdown();
         retryConnectionTimeScheduler = null;
-        connectFuture.finished(exp);
-
+        this.initAcceptanceFuture.completeExceptionally(new RuntimeException("Something went connecting!"));
     }
 
     /**

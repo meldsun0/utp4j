@@ -51,9 +51,9 @@ public class UtpChannelReadingTest {
         UtpAlgConfiguration.SKIP_PACKETS_UNTIL_ACK = 1;
 
         //mocking stuff
-        UTPClient channel = new UTPClient();
-        channel.setState(UtpSocketState.CONNECTED);
         DatagramSocket socket = mock(DatagramSocket.class);
+        UTPClient channel = new UTPClient(socket);
+        channel.setState(UtpSocketState.CONNECTED);
 
         MicroSecondsTimeStamp stamp = mock(MicroSecondsTimeStamp.class);
         when(stamp.utpDifference(anyInt(), anyInt())).thenReturn(500000000);
@@ -61,7 +61,7 @@ public class UtpChannelReadingTest {
         when(stamp.utpTimeStamp()).thenReturn(1251241241);
 
         channel.setTimetamper(stamp);
-        channel.setDgSocket(socket);
+
         channel.setRemoteAddress(new InetSocketAddress("localhost", 12345));
 
         // last recieved packet has seqNr. 2, next one will be packet with seqNr. 3
