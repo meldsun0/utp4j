@@ -276,23 +276,15 @@ public class UtpReadingRunnable extends Thread implements Runnable {
         return ackNumber + 1;
     }
 
-    private boolean hasSkippedPackets() {
-        return !skippedBuffer.isEmpty();
-    }
+
 
     public void graceFullInterrupt() {
         this.graceFullInterrupt = true;
     }
 
-    private boolean continueReading() {
-        return !graceFullInterrupt && !exceptionOccured
-                && (!gotLastPacket || hasSkippedPackets() || !timeAwaitedAfterLastPacket());
-    }
 
-    private boolean timeAwaitedAfterLastPacket() {
-        return (timeStamper.timeStamp() - lastPacketTimestamp) > UtpAlgConfiguration.TIME_WAIT_AFTER_LAST_PACKET
-                && gotLastPacket;
-    }
+
+
 
     public boolean isRunning() {
         return isRunning;
@@ -305,4 +297,25 @@ public class UtpReadingRunnable extends Thread implements Runnable {
     public void setTimestamp(MicroSecondsTimeStamp timestamp) {
         this.timeStamper = timestamp;
     }
+
+
+
+
+
+
+    //done
+    private boolean continueReading() {
+        return !graceFullInterrupt && !exceptionOccured
+                && (!gotLastPacket || hasSkippedPackets() || !timeAwaitedAfterLastPacket());
+    }
+
+    private boolean hasSkippedPackets() {
+        return !skippedBuffer.isEmpty();
+    }
+
+    private boolean timeAwaitedAfterLastPacket() {
+        return (timeStamper.timeStamp() - lastPacketTimestamp) > UtpAlgConfiguration.TIME_WAIT_AFTER_LAST_PACKET
+                && gotLastPacket;
+    }
+
 }

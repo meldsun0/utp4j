@@ -8,6 +8,7 @@ org-mockito-mockito-junit-jupiter = "5.3.1"
 org-slf4j-slf4j-api = "2.0.12"
 org-slf4j-slf4j-reload4j = "2.0.12"
 log4j= "2.23.1"
+guava = "33.3.1-jre"
 [libraries]
 org-junit-jupiter-junit-jupiter-api = { module = "org.junit.jupiter:junit-jupiter-api", version.ref = "org-junit-jupiter-junit-jupiter-api" }
 org-mockito-mockito-core = { module = "org.mockito:mockito-core", version.ref = "org-mockito-mockito-core" }
@@ -17,3 +18,5 @@ org-slf4j-slf4j-reload4j = { module = "org.slf4j:slf4j-reload4j", version.ref = 
 
 apache-logging-log4j-api = { module = "org.apache.logging.log4j:log4j-api", version.ref = "log4j"}
 apache-logging-log4j-core = { module = "org.apache.logging.log4j:log4j-core", version.ref = "log4j"}
+
+google-guava = { module = "com.google.guava:guava", version.ref = "guava"}

@@ -24,6 +24,7 @@ dependencies {
     implementation libs.org.slf4j.slf4j.reload4j
     implementation libs.apache.logging.log4j.api
     implementation libs.apache.logging.log4j.core
+    implementation libs.google.guava
 
     testImplementation libs.org.mockito.mockito.core
     testImplementation libs.org.mockito.mockito.junit.jupiter

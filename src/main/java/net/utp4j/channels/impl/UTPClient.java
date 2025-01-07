@@ -217,7 +217,8 @@ public class UTPClient implements UtpPacketRecievable {
     private void handleFinPacket(DatagramPacket udpPacket) {
         stateLock.lock();
         try {
-            setState(UtpSocketState.GOT_FIN);
+            this.state = UtpSocketState.GOT_FIN;
+
             UtpPacket finPacket = extractUtpPacket(udpPacket);
             long freeBuffer = 0;
             if (reader != null && reader.isRunning()) {
@@ -229,7 +230,6 @@ public class UTPClient implements UtpPacketRecievable {
             ackPacket(finPacket, timeStamper.utpDifference(finPacket.getTimestamp()), freeBuffer);
         } catch (IOException exp) {
             exp.printStackTrace();
-            // TODO: what to do if exception?
         } finally {
             stateLock.unlock();
         }
@@ -294,10 +294,8 @@ public class UTPClient implements UtpPacketRecievable {
      * @param windowSize          the remaining buffer size.
      * @throws IOException
      */
-    public void ackPacket(UtpPacket utpPacket, int timestampDifference,
-                          long windowSize) throws IOException {
-        UtpPacket ackPacket = createAckPacket(utpPacket, timestampDifference,
-                windowSize);
+    public void ackPacket(UtpPacket utpPacket, int timestampDifference, long windowSize) throws IOException {
+        UtpPacket ackPacket = createAckPacket(utpPacket, timestampDifference, windowSize);
         sendPacket(UtpPacket.createDatagramPacket(ackPacket, this.remoteAddressWhichThisSocketIsConnectedTo));
     }
 
@@ -379,7 +377,7 @@ public class UTPClient implements UtpPacketRecievable {
                 server.unregister(this);
             }
         } else {
-           // LOG.warn("An attempt to stop already stopping/stopped UTP server");
+           LOG.warn("An attempt to stop already stopping/stopped UTP server");
         }
 
     }
@@ -592,11 +590,6 @@ public class UTPClient implements UtpPacketRecievable {
 
     }
 
-
-
-    /*
-     * Creates an ACK packet.
-     */
     protected UtpPacket createAckPacket(UtpPacket pkt, int timedifference,
                                         long advertisedWindow) {
         UtpPacket ackPacket = new UtpPacket();
@@ -624,18 +617,6 @@ public class UTPClient implements UtpPacketRecievable {
         return pkt;
     }
 
-
-
-
-    /**
-     *
-     *
-     *
-     *
-     *
-     * */
-
-
     public long getConnectionIdRecievingIncoming() {
         return connectionIdRecievingIncoming;
     }
@@ -659,19 +640,11 @@ public class UTPClient implements UtpPacketRecievable {
 
     public void setTimetamper(MicroSecondsTimeStamp stamp) {
         this.timeStamper = stamp;
-
     }
 
     public void setCurrentAckNumber(int currentAckNumber) {
-//		log.debug("ack nubmer set to: " + ackNumber);
         this.currentAckNumber = currentAckNumber;
     }
-
-    public void setServer(UTPServer UTPServer) {
-        this.server = UTPServer;
-
-    }
-
 
     public void setRemoteAddressWhichThisSocketIsConnectedTo(InetSocketAddress localhost) {
         this.remoteAddressWhichThisSocketIsConnectedTo = localhost;
