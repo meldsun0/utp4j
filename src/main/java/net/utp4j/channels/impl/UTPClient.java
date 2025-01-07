@@ -42,55 +42,31 @@ import static net.utp4j.data.UtpPacketUtils.*;
 import static net.utp4j.data.bytes.UnsignedTypesUtil.*;
 
 
-public class UTPClient implements
-        UtpPacketRecievable {
+public class UTPClient implements UtpPacketRecievable {
 
 
-    /* ID for outgoing packets */
-    private long connectionIdSending;
+    private long connectionIdSendingOutgoing;
+    private long connectionIdRecievingIncoming;
 
-    /* timestamping utility */
-    protected MicroSecondsTimeStamp timeStamper = new MicroSecondsTimeStamp();
 
-    /* current sequenceNumber */
-    private int sequenceNumber;
+    private MicroSecondsTimeStamp timeStamper = new MicroSecondsTimeStamp();
+    private int currentSequenceNumber;
 
-    /* ID for incomming packets */
-    private long connectionIdRecieving;
 
-    /*
-     * address of the remote sockets which this socket is connected to
-     */
-    protected SocketAddress remoteAddress;
-
-    /* current ack Number */
-    protected int ackNumber;
-
-    /* reference to the underlying UDP Socket */
-    protected DatagramSocket dgSocket;
+    private SocketAddress remoteAddressWhichThisSocketIsConnectedTo;
+    private int currentAckNumber;
+    private DatagramSocket underlyingUDPSocket;
 
     /*
      * Connection Future Object - need to hold a reference here i case
      * connection the initial connection attempt fails. So it will be updates
      * once the reattempts success.
      */
-    protected UtpConnectFutureImpl connectFuture = null;
-
-    /* lock for the socket state* */
-    protected final ReentrantLock stateLock = new ReentrantLock();
-
-    /* logger */
-    private static final Logger log = LoggerFactory
-            .getLogger(UTPClient.class);
-
-    /* Current state of the socket */
-    protected volatile UtpSocketState state = null;
-
-    /* Sequencing begin */
-    protected static int DEF_SEQ_START = 1;
-
-
-
+    private UtpConnectFutureImpl connectFuture = null;
+    private final ReentrantLock stateLock = new ReentrantLock();
+    private static final Logger log = LoggerFactory.getLogger(UTPClient.class);
+    private volatile UtpSocketState state = null;
+    private static int DEF_SEQ_START = 1;
 
     private final BlockingQueue<UtpTimestampedPacketDTO> queue = new LinkedBlockingQueue<UtpTimestampedPacketDTO>();
 
@@ -98,12 +74,12 @@ public class UTPClient implements
     private UtpReadingRunnable reader;
     private final Object sendLock = new Object();
 
-    private UTPServer server;
+
     private ScheduledExecutorService retryConnectionTimeScheduler;
     private int connectionAttempts = 0;
 
     private int eofPacket;
-
+    private UTPServer server;
 
     private AtomicBoolean listen = new AtomicBoolean(false);
 
@@ -113,7 +89,7 @@ public class UTPClient implements
 
     public UTPClient(DatagramSocket socket, UTPServer server){
         this.state = CLOSED;
-        this.dgSocket = socket;
+        this.underlyingUDPSocket = socket;
         this.server = server;
     }
 
@@ -134,16 +110,16 @@ public class UTPClient implements
                 return null;
             }
             try {
-                this.setDgSocket(new DatagramSocket());
+                this.setUnderlyingUDPSocket(new DatagramSocket());
 
                 startReading();
 
-                this.remoteAddress = address;
-                this.connectionIdRecieving = connectionId;
-                this.connectionIdSending = connectionId+ 1 ;
-                this.sequenceNumber = DEF_SEQ_START;
+                this.remoteAddressWhichThisSocketIsConnectedTo = address;
+                this.connectionIdRecievingIncoming = connectionId;
+                this.connectionIdSendingOutgoing = connectionId+ 1 ;
+                this.currentSequenceNumber = DEF_SEQ_START;
 
-                UtpPacket synPacket = UtpPacketUtils.createSynPacket(longToUshort(getConnectionIdRecieving()), timeStamper.utpTimeStamp());
+                UtpPacket synPacket = UtpPacketUtils.createSynPacket(longToUshort(getConnectionIdRecievingIncoming()), timeStamper.utpTimeStamp());
 
                 sendPacket(synPacket);
                 setState(SYN_SENT);
@@ -168,7 +144,7 @@ public class UTPClient implements
                 byte[] buffer = new byte[MAX_UDP_HEADER_LENGTH + MAX_UTP_PACKET_LENGTH];
                 DatagramPacket dgpkt = new DatagramPacket(buffer, buffer.length);
                 try {
-                    getDgSocket().receive(dgpkt);
+                    getUnderlyingUDPSocket().receive(dgpkt);
                     recievePacket(dgpkt);
                 } catch (IOException e) {
                     break;
@@ -180,7 +156,7 @@ public class UTPClient implements
 
 
     public long getConnectionIdsending() {
-        return connectionIdSending;
+        return connectionIdSendingOutgoing;
     }
 
     public boolean isOpen() {
@@ -195,9 +171,9 @@ public class UTPClient implements
 
     /* debug method to print id's, seq# and ack# */
     protected void printState(String msg) {
-        String state = "[ConnID Sending: " + connectionIdSending + "] "
-                + "[ConnID Recv: " + connectionIdRecieving + "] [SeqNr. "
-                + sequenceNumber + "] [AckNr: " + ackNumber + "]";
+        String state = "[ConnID Sending: " + connectionIdSendingOutgoing + "] "
+                + "[ConnID Recv: " + connectionIdRecievingIncoming + "] [SeqNr. "
+                + currentSequenceNumber + "] [AckNr: " + currentAckNumber + "]";
         log.debug(msg + state);
 
     }
@@ -208,11 +184,11 @@ public class UTPClient implements
      * to happen Seq# == 0 not possible.
      */
     protected void incrementSequenceNumber() {
-        int seqNumber = getSequenceNumber() + 1;
+        int seqNumber = getCurrentSequenceNumber() + 1;
         if (seqNumber > MAX_USHORT) {
             seqNumber = 1;
         }
-        this.sequenceNumber = seqNumber;
+        this.currentSequenceNumber = seqNumber;
     }
 
     public void setState(UtpSocketState state) {
@@ -277,7 +253,7 @@ public class UTPClient implements
 
     private void handleSynAckPacket(DatagramPacket udpPacket) {
         UtpPacket pkt = extractUtpPacket(udpPacket);
-        if ((pkt.getConnectionId() & 0xFFFF) == getConnectionIdRecieving()) {
+        if ((pkt.getConnectionId() & 0xFFFF) == getConnectionIdRecievingIncoming()) {
             stateLock.lock();
             setAckNrFromPacketSqNr(pkt);
             setState(CONNECTED);
@@ -291,7 +267,7 @@ public class UTPClient implements
     }
 
     private boolean isSameAddressAndId(long id, SocketAddress addr) {
-        return (id & 0xFFFFFFFF) == getConnectionIdRecieving()
+        return (id & 0xFFFFFFFF) == getConnectionIdRecievingIncoming()
                 && addr.equals(getRemoteAdress());
     }
 
@@ -340,7 +316,7 @@ public class UTPClient implements
         Random rnd = new Random();
         int max = (int) (MAX_USHORT - 1);
         int rndInt = rnd.nextInt(max);
-        this.sequenceNumber = rndInt ;
+        this.currentSequenceNumber = rndInt ;
 
     }
 
@@ -349,7 +325,7 @@ public class UTPClient implements
 
         if (acceptSyn(udpPacket)) {
             int timeStamp = timeStamper.utpTimeStamp();
-            this.remoteAddress = udpPacket.getSocketAddress();
+            this.remoteAddressWhichThisSocketIsConnectedTo = udpPacket.getSocketAddress();
             setConnectionIdsFromPacket(utpPacket);
             setupRandomSeqNumber();
             setAckNrFromPacketSqNr(utpPacket);
@@ -365,10 +341,10 @@ public class UTPClient implements
                 setState(CONNECTED);
             } catch (IOException exp) {
                 // TODO: In future?
-                this.remoteAddress = null;
-                this.connectionIdSending = (short) 0;
-                this.connectionIdRecieving = (short) 0;
-                setAckNumber(0);
+                this.remoteAddressWhichThisSocketIsConnectedTo = null;
+                this.connectionIdSendingOutgoing = (short) 0;
+                this.connectionIdRecievingIncoming = (short) 0;
+                setCurrentAckNumber(0);
                 setState(SYN_ACKING_FAILED);
                 exp.printStackTrace();
             }
@@ -391,15 +367,15 @@ public class UTPClient implements
 
     protected void setAckNrFromPacketSqNr(UtpPacket utpPacket) {
         short ackNumberS = utpPacket.getSequenceNumber();
-        setAckNumber(ackNumberS & 0xFFFF);
+        setCurrentAckNumber(ackNumberS & 0xFFFF);
     }
 
     private void setConnectionIdsFromPacket(UtpPacket utpPacket) {
         short connId = utpPacket.getConnectionId();
         int connIdSender = (connId & 0xFFFF);
         int connIdRec = (connId & 0xFFFF) + 1;
-        this.connectionIdSending = connIdSender;
-        this.connectionIdRecieving = connIdRec;
+        this.connectionIdSendingOutgoing = connIdSender;
+        this.connectionIdRecievingIncoming = connIdRec;
 
 
     }
@@ -478,7 +454,7 @@ public class UTPClient implements
     private UtpPacket createSelectiveAckPacket(SelectiveAckHeaderExtension headerExtension,
                                                int timestampDifference, long advertisedWindow) {
         UtpPacket ackPacket = new UtpPacket();
-        ackPacket.setAckNumber(longToUshort(getAckNumber()));
+        ackPacket.setAckNumber(longToUshort(getCurrentAckNumber()));
         ackPacket.setTimestampDifference(timestampDifference);
         ackPacket.setTimestamp(timeStamper.utpTimeStamp());
         ackPacket.setConnectionId(longToUshort(getConnectionIdsending()));
@@ -515,7 +491,7 @@ public class UTPClient implements
     public void ackAlreadyAcked(SelectiveAckHeaderExtension extension, int timestampDifference,
                                 long windowSize) throws IOException {
         UtpPacket ackPacket = new UtpPacket();
-        ackPacket.setAckNumber(longToUshort(getAckNumber()));
+        ackPacket.setAckNumber(longToUshort(getCurrentAckNumber()));
         SelectiveAckHeaderExtension[] extensions = {extension};
         ackPacket.setExtensions(extensions);
         ackPacket.setTimestampDifference(timestampDifference);
@@ -529,7 +505,7 @@ public class UTPClient implements
 
     public void sendPacket(DatagramPacket pkt) throws IOException {
         synchronized (sendLock) {
-            getDgSocket().send(pkt);
+            getUnderlyingUDPSocket().send(pkt);
         }
 
     }
@@ -545,11 +521,11 @@ public class UTPClient implements
         }
     }
 
-    public void setDgSocket(DatagramSocket dgSocket) {
-        if (this.dgSocket != null) {
-            this.dgSocket.close();
+    public void setUnderlyingUDPSocket(DatagramSocket underlyingUDPSocket) {
+        if (this.underlyingUDPSocket != null) {
+            this.underlyingUDPSocket.close();
         }
-        this.dgSocket = dgSocket;
+        this.underlyingUDPSocket = underlyingUDPSocket;
     }
 
 
@@ -588,8 +564,8 @@ public class UTPClient implements
      */
     public void connectionFailed(IOException exp) {
         log.debug("got failing message");
-        this.sequenceNumber = DEF_SEQ_START;
-        this.remoteAddress = null;
+        this.currentSequenceNumber = DEF_SEQ_START;
+        this.remoteAddressWhichThisSocketIsConnectedTo = null;
         abortImpl();
         setState(CLOSED);
         retryConnectionTimeScheduler.shutdown();
@@ -640,7 +616,7 @@ public class UTPClient implements
         if (pkt.getTypeVersion() != FIN) {
             setAckNrFromPacketSqNr(pkt);
         }
-        ackPacket.setAckNumber(longToUshort(getAckNumber()));
+        ackPacket.setAckNumber(longToUshort(getCurrentAckNumber()));
 
         ackPacket.setTimestampDifference(timedifference);
         ackPacket.setTimestamp(timeStamper.utpTimeStamp());
@@ -652,9 +628,9 @@ public class UTPClient implements
 
     protected UtpPacket createDataPacket() {
         UtpPacket pkt = new UtpPacket();
-        pkt.setSequenceNumber(longToUshort(getSequenceNumber()));
+        pkt.setSequenceNumber(longToUshort(getCurrentSequenceNumber()));
         incrementSequenceNumber();
-        pkt.setAckNumber(longToUshort(getAckNumber()));
+        pkt.setAckNumber(longToUshort(getCurrentAckNumber()));
         pkt.setConnectionId(longToUshort(getConnectionIdsending()));
         pkt.setTimestamp(timeStamper.utpTimeStamp());
         pkt.setTypeVersion(UtpPacketUtils.DATA);
@@ -673,8 +649,8 @@ public class UTPClient implements
      * */
 
 
-    public long getConnectionIdRecieving() {
-        return connectionIdRecieving;
+    public long getConnectionIdRecievingIncoming() {
+        return connectionIdRecievingIncoming;
     }
 
     public UtpSocketState getState() {
@@ -682,19 +658,19 @@ public class UTPClient implements
     }
 
     public SocketAddress getRemoteAdress() {
-        return remoteAddress;
+        return remoteAddressWhichThisSocketIsConnectedTo;
     }
 
-    public int getAckNumber() {
-        return ackNumber;
+    public int getCurrentAckNumber() {
+        return currentAckNumber;
     }
 
-    public int getSequenceNumber() {
-        return sequenceNumber;
+    public int getCurrentSequenceNumber() {
+        return currentSequenceNumber;
     }
 
-    public DatagramSocket getDgSocket() {
-        return dgSocket;
+    public DatagramSocket getUnderlyingUDPSocket() {
+        return underlyingUDPSocket;
     }
 
     public void setTimetamper(MicroSecondsTimeStamp stamp) {
@@ -702,9 +678,9 @@ public class UTPClient implements
 
     }
 
-    public void setAckNumber(int ackNumber) {
+    public void setCurrentAckNumber(int currentAckNumber) {
 //		log.debug("ack nubmer set to: " + ackNumber);
-        this.ackNumber = ackNumber;
+        this.currentAckNumber = currentAckNumber;
     }
 
     public void setServer(UTPServer UTPServer) {
@@ -713,8 +689,8 @@ public class UTPClient implements
     }
 
 
-    public void setRemoteAddress(InetSocketAddress localhost) {
-        this.remoteAddress = localhost;
+    public void setRemoteAddressWhichThisSocketIsConnectedTo(InetSocketAddress localhost) {
+        this.remoteAddressWhichThisSocketIsConnectedTo = localhost;
     }
 
     public void removeWriter() {

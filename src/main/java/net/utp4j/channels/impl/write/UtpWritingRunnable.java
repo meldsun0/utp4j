@@ -60,7 +60,7 @@ public class UtpWritingRunnable extends Thread implements Runnable {
 
     @Override
     public void run() {
-        algorithm.initiateAckPosition(channel.getSequenceNumber());
+        algorithm.initiateAckPosition(channel.getCurrentSequenceNumber());
         algorithm.setTimeStamper(timeStamper);
         algorithm.setByteBuffer(buffer);
         isRunning = true;

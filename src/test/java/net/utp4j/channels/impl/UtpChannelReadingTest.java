@@ -61,11 +61,11 @@ public class UtpChannelReadingTest {
         when(stamp.utpTimeStamp()).thenReturn(1251241241);
 
         channel.setTimetamper(stamp);
-        channel.setDgSocket(socket);
-        channel.setRemoteAddress(new InetSocketAddress("localhost", 12345));
+        channel.setUnderlyingUDPSocket(socket);
+        channel.setRemoteAddressWhichThisSocketIsConnectedTo(new InetSocketAddress("localhost", 12345));
 
         // last recieved packet has seqNr. 2, next one will be packet with seqNr. 3
-        channel.setAckNumber(2);
+        channel.setCurrentAckNumber(2);
 
         /*
          * argument captor on socket, which will record all invocations of socket.send(packet)

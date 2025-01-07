@@ -78,7 +78,7 @@ public class UTPServer implements UtpPacketRecievable {
                 utpChannel.recievePacket(packet);
 
                 if (isChannelRegistrationNecessary(utpChannel)) {
-                    connectionIds.put((int) (utpChannel.getConnectionIdRecieving() & 0xFFFF), utpChannel);
+                    connectionIds.put((int) (utpChannel.getConnectionIdRecievingIncoming() & 0xFFFF), utpChannel);
                 }else{
                     utpChannel = null;
                     this.initAcceptanceFuture.completeExceptionally(new RuntimeException("Something went wrong!"));
@@ -118,7 +118,7 @@ public class UTPServer implements UtpPacketRecievable {
     }
 
     private boolean isChannelRegistrationNecessary(UTPClient channel) {
-        return connectionIds.get(channel.getConnectionIdRecieving()) == null
+        return connectionIds.get(channel.getConnectionIdRecievingIncoming()) == null
                 && channel.getState() != UtpSocketState.SYN_ACKING_FAILED;
     }
 
@@ -135,7 +135,7 @@ public class UTPServer implements UtpPacketRecievable {
     }
 
     public void unregister(UTPClient UTPClient) {
-        connectionIds.remove((int) UTPClient.getConnectionIdRecieving() & 0xFFFF);
+        connectionIds.remove((int) UTPClient.getConnectionIdRecievingIncoming() & 0xFFFF);
     }
 
     public UtpWriteFuture write(ByteBuffer dataToSend) throws ExecutionException, InterruptedException {

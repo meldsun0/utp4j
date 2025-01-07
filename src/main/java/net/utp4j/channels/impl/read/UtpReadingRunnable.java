@@ -183,7 +183,7 @@ public class UtpReadingRunnable extends Thread implements Runnable {
                 lastPacket = p.utpPacket();
             }
             skippedBuffer.reindex(lastSeqNumber);
-            channel.setAckNumber(lastSeqNumber);
+            channel.setCurrentAckNumber(lastSeqNumber);
             //if still has skipped packets, need to selectively ack
             if (hasSkippedPackets()) {
                 if (ackThisPacket()) {
@@ -203,7 +203,7 @@ public class UtpReadingRunnable extends Thread implements Runnable {
 //				log.debug("acking expected, nomore");
                 channel.ackPacket(timestampedPair.utpPacket(), getTimestampDifference(timestampedPair), getLeftSpaceInBuffer());
             } else {
-                channel.setAckNumber(timestampedPair.utpPacket().getSequenceNumber() & 0xFFFF);
+                channel.setCurrentAckNumber(timestampedPair.utpPacket().getSequenceNumber() & 0xFFFF);
             }
             buffer.put(timestampedPair.utpPacket().getPayload());
             totalPayloadLength += timestampedPair.utpPacket().getPayload().length;
@@ -269,7 +269,7 @@ public class UtpReadingRunnable extends Thread implements Runnable {
     }
 
     private int getExpectedSeqNr() {
-        int ackNumber = channel.getAckNumber();
+        int ackNumber = channel.getCurrentAckNumber();
         if (ackNumber == UnsignedTypesUtil.MAX_USHORT) {
             return 1;
         }
