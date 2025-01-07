@@ -35,6 +35,7 @@ public class UTPServer implements UtpPacketRecievable {
     private final InetSocketAddress listenAddress;
 
     private final CompletableFuture<UTPClient> initAcceptanceFuture;
+    private CompletableFuture<Void> readerFuture;
 
     public UTPServer(InetSocketAddress listenAddress) {
         this.listenAddress = listenAddress;
@@ -52,7 +53,7 @@ public class UTPServer implements UtpPacketRecievable {
 
 
     private void startReading() {
-        CompletableFuture.runAsync(() -> {
+       this.readerFuture = CompletableFuture.runAsync(() -> {
             while (listen.get()) {
                 byte[] buffer = new byte[MAX_UDP_HEADER_LENGTH + MAX_UTP_PACKET_LENGTH];
                 DatagramPacket dgpkt = new DatagramPacket(buffer, buffer.length);
@@ -128,6 +129,7 @@ public class UTPServer implements UtpPacketRecievable {
             if (connectionIds.isEmpty()) {
                 socket.close();
                 this.initAcceptanceFuture.get().close();
+                this.readerFuture.complete(null);
             }
         } else {
             LOG.warn("An attempt to stop already stopping/stopped UTP server");

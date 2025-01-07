@@ -16,6 +16,9 @@ package net.utp4j.data;
 
 import net.utp4j.data.bytes.UnsignedTypesUtil;
 
+import java.io.IOException;
+import java.net.DatagramPacket;
+import java.net.SocketAddress;
 import java.util.ArrayList;
 
 import static net.utp4j.data.UtpPacketUtils.DEF_HEADER_LENGTH;
@@ -295,6 +298,12 @@ public class UtpPacket {
 
     }
 
+
+    public static DatagramPacket createDatagramPacket(UtpPacket packet, SocketAddress socketAddress) throws IOException {
+            byte[] utpPacketBytes = packet.toByteArray();
+            int length = packet.getPacketLength();
+            return new DatagramPacket(utpPacketBytes, length, socketAddress);
+        }
 
     @Override
     public int hashCode() {
