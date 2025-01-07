@@ -1,6 +1,5 @@
 package net.utp4j.examples;
 
-import net.utp4j.channels.futures.UtpConnectFuture;
 import net.utp4j.channels.futures.UtpWriteFuture;
 import net.utp4j.channels.impl.UTPClient;
 
@@ -9,9 +8,11 @@ import java.io.RandomAccessFile;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
 public class TestWrite {
-    public static void main(String[] args) throws IOException, InterruptedException {
+    public static void main(String[] args) throws IOException, InterruptedException, ExecutionException {
 
         ByteBuffer buffer = ByteBuffer.allocate(150000000);
         RandomAccessFile file = new RandomAccessFile("testData/sc S01E01.avi", "rw");
@@ -24,8 +25,8 @@ public class TestWrite {
         System.out.println("file read");
 
         UTPClient chanel = new UTPClient();
-        UtpConnectFuture cFuture = chanel.connect(new InetSocketAddress("localhost", 13345), 333);
-        cFuture.block();
+        CompletableFuture<Void> cFuture = chanel.connect(new InetSocketAddress("localhost", 13345), 333);
+        cFuture.get();
 
         UtpWriteFuture fut = chanel.write(buffer);
         fut.block();

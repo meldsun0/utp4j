@@ -14,7 +14,6 @@
  */
 package net.utp4j.examples.configtest;
 
-import net.utp4j.channels.futures.UtpConnectFuture;
 import net.utp4j.channels.futures.UtpWriteFuture;
 import net.utp4j.channels.impl.UTPClient;
 import net.utp4j.data.MicroSecondsTimeStamp;
@@ -28,9 +27,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.text.NumberFormat;
 import java.util.Locale;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 
 public class ConfigTestWrite {
     private static final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
@@ -42,7 +39,7 @@ public class ConfigTestWrite {
 
     private static final Logger log = LoggerFactory.getLogger(ConfigTestWrite.class);
 
-    public static void main(String[] args) throws IOException, InterruptedException {
+    public static void main(String[] args) throws IOException, InterruptedException, ExecutionException {
 
         String testPlan = "testPlan/testplan2.csv";
         String testDataFile = "testData/sc S01E01.avi";
@@ -80,11 +77,11 @@ public class ConfigTestWrite {
             }
 
 //			UtpConnectFuture cFuture = chanel.connect(new InetSocketAddress("192.168.1.40", 13344));
-            UtpConnectFuture cFuture = chanel.connect(new InetSocketAddress("localhost", 13344), 456);
+            CompletableFuture<Void> cFuture = chanel.connect(new InetSocketAddress("localhost", 13344), 456);
 //			UtpConnectFuture cFuture = chanel.connect(new InetSocketAddress("192.168.1.44", 13344));
 
-            cFuture.block();
-            if (cFuture.isSuccessfull()) {
+            cFuture.get();
+            if (cFuture.isDone()) {
                 long start = timeStamper.timeStamp();
                 UtpWriteFuture writeFuture = chanel.write(buffer);
                 writeFuture.block();

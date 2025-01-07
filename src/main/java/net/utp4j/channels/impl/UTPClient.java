@@ -15,11 +15,9 @@
 package net.utp4j.channels.impl;
 
 import net.utp4j.channels.UtpSocketState;
-import net.utp4j.channels.futures.UtpConnectFuture;
 import net.utp4j.channels.futures.UtpWriteFuture;
 import net.utp4j.channels.impl.alg.UtpAlgConfiguration;
 import net.utp4j.channels.impl.conn.ConnectionTimeOutRunnable;
-import net.utp4j.channels.impl.conn.UtpConnectFutureImpl;
 import net.utp4j.channels.impl.read.UtpReadFutureImpl;
 import net.utp4j.channels.impl.read.UtpReadingRunnable;
 import net.utp4j.channels.impl.recieve.UtpPacketRecievable;
@@ -56,12 +54,6 @@ public class UTPClient implements UtpPacketRecievable {
     private int currentAckNumber;
     private DatagramSocket underlyingUDPSocket;
 
-    /*
-     * Connection Future Object - need to hold a reference here i case
-     * connection the initial connection attempt fails. So it will be updates
-     * once the reattempts success.
-     */
-    private UtpConnectFutureImpl connectFuture = null;
     private final ReentrantLock stateLock = new ReentrantLock();
 
 
@@ -82,35 +74,32 @@ public class UTPClient implements UtpPacketRecievable {
     private UTPServer server;
 
     private AtomicBoolean listen = new AtomicBoolean(false);
+
     private CompletableFuture<Void> incomingConnectionFuture;
+    private CompletableFuture<Void> connection;
+
     private static final org.apache.logging.log4j.Logger LOG = LogManager.getLogger(UTPClient.class);
 
-    public UTPClient(){
+    public UTPClient() {
         this.state = CLOSED;
     }
 
-    public UTPClient(DatagramSocket socket, UTPServer server){
+    public UTPClient(DatagramSocket socket, UTPServer server) {
         this.state = CLOSED;
         this.underlyingUDPSocket = socket;
         this.server = server;
     }
 
 
-
-
-    public UtpConnectFuture connect(SocketAddress address, long connectionId) {
+    public CompletableFuture<Void> connect(SocketAddress address, long connectionId) {
         stateLock.lock();
-    //    LOG.info("Starting UTP server listening on {}", listenAddress);
+        //    LOG.info("Starting UTP server listening on {}", listenAddress);
         if (!listen.compareAndSet(false, true)) {
             // return null; //CompletableFuture.failedFuture(new IllegalStateException("Attempted to start an already started server listening on " + listenAddress));
         }
         try {
-            try {
-                connectFuture = new UtpConnectFutureImpl();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-                return null;
-            }
+            connection = new CompletableFuture<Void>();
+
             try {
                 this.setUnderlyingUDPSocket(new DatagramSocket());
 
@@ -118,7 +107,7 @@ public class UTPClient implements UtpPacketRecievable {
 
                 this.remoteAddressWhichThisSocketIsConnectedTo = address;
                 this.connectionIdRecievingIncoming = connectionId;
-                this.connectionIdSendingOutgoing = connectionId+ 1 ;
+                this.connectionIdSendingOutgoing = connectionId + 1;
                 this.currentSequenceNumber = DEF_SEQ_START;
 
                 UtpPacket synPacket = UtpPacketUtils.createSynPacket(longToUshort(getConnectionIdRecievingIncoming()), timeStamper.utpTimeStamp());
@@ -136,7 +125,7 @@ public class UTPClient implements UtpPacketRecievable {
             stateLock.unlock();
         }
 
-        return connectFuture;
+        return connection;
     }
 
 
@@ -154,7 +143,6 @@ public class UTPClient implements UtpPacketRecievable {
             }
         });
     }
-
 
 
     public long getConnectionIdsending() {
@@ -186,9 +174,6 @@ public class UTPClient implements UtpPacketRecievable {
     public void setState(UtpSocketState state) {
         this.state = state;
     }
-
-
-
 
 
     /*
@@ -251,7 +236,7 @@ public class UTPClient implements UtpPacketRecievable {
             setState(CONNECTED);
             printState("[SynAck recieved] ");
             disableConnectionTimeOutCounter();
-            connectFuture.finished(null);
+            connection.complete(null);
             stateLock.unlock();
         } else {
             sendResetPacket(udpPacket.getSocketAddress());
@@ -306,7 +291,7 @@ public class UTPClient implements UtpPacketRecievable {
         Random rnd = new Random();
         int max = (int) (MAX_USHORT - 1);
         int rndInt = rnd.nextInt(max);
-        this.currentSequenceNumber = rndInt ;
+        this.currentSequenceNumber = rndInt;
 
     }
 
@@ -377,7 +362,7 @@ public class UTPClient implements UtpPacketRecievable {
                 server.unregister(this);
             }
         } else {
-           LOG.warn("An attempt to stop already stopping/stopped UTP server");
+            LOG.warn("An attempt to stop already stopping/stopped UTP server");
         }
 
     }
@@ -464,7 +449,6 @@ public class UTPClient implements UtpPacketRecievable {
     }
 
 
-
     public void close() {
         abortImpl();
         if (isReading()) {
@@ -514,8 +498,6 @@ public class UTPClient implements UtpPacketRecievable {
     }
 
 
-
-
     public void returnFromReading() {
         reader = null;
         //TODO: dispatch:
@@ -523,7 +505,6 @@ public class UTPClient implements UtpPacketRecievable {
             this.state = UtpSocketState.CONNECTED;
         }
     }
-
 
 
     /*
@@ -555,7 +536,7 @@ public class UTPClient implements UtpPacketRecievable {
         setState(CLOSED);
         retryConnectionTimeScheduler.shutdown();
         retryConnectionTimeScheduler = null;
-        connectFuture.finished(exp);
+        connection.completeExceptionally(new RuntimeException("Something went wrong!"));
 
     }
 
