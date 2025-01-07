@@ -22,6 +22,7 @@ import net.utp4j.channels.impl.operations.UtpPacketRecievable;
 import net.utp4j.channels.impl.operations.UtpWritingRunnable;
 import net.utp4j.data.*;
 import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
 import java.net.*;
@@ -71,11 +72,9 @@ public class UTPClient implements UtpPacketRecievable {
     private UTPServer server;
 
     private AtomicBoolean listen = new AtomicBoolean(false);
-
     private CompletableFuture<Void> incomingConnectionFuture;
     private CompletableFuture<Void> connection;
-
-    private static final org.apache.logging.log4j.Logger LOG = LogManager.getLogger(UTPClient.class);
+    private static final Logger LOG = LogManager.getLogger(UTPClient.class);
 
     public UTPClient() {
         this.state = CLOSED;
