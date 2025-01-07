@@ -23,7 +23,6 @@ import net.utp4j.channels.impl.conn.UtpConnectFutureImpl;
 import net.utp4j.channels.impl.read.UtpReadFutureImpl;
 import net.utp4j.channels.impl.read.UtpReadingRunnable;
 import net.utp4j.channels.impl.recieve.UtpPacketRecievable;
-import net.utp4j.channels.impl.recieve.UtpRecieveRunnable;
 import net.utp4j.channels.impl.write.UtpWriteFutureImpl;
 import net.utp4j.channels.impl.write.UtpWritingRunnable;
 import net.utp4j.data.*;
@@ -35,6 +34,7 @@ import java.net.*;
 import java.nio.ByteBuffer;
 import java.util.Random;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantLock;
 
 import static net.utp4j.channels.UtpSocketState.*;
@@ -92,13 +92,8 @@ public class UTPClient implements
 
 
 
-
-
-
-
     private final BlockingQueue<UtpTimestampedPacketDTO> queue = new LinkedBlockingQueue<UtpTimestampedPacketDTO>();
 
-    private UtpRecieveRunnable reciever;
     private UtpWritingRunnable writer;
     private UtpReadingRunnable reader;
     private final Object sendLock = new Object();
@@ -109,6 +104,8 @@ public class UTPClient implements
 
     private int eofPacket;
 
+
+    private AtomicBoolean listen = new AtomicBoolean(false);
 
     public UTPClient(){
         this.state = CLOSED;
@@ -125,6 +122,10 @@ public class UTPClient implements
 
     public UtpConnectFuture connect(SocketAddress address, long connectionId) {
         stateLock.lock();
+    //    LOG.info("Starting UTP server listening on {}", listenAddress);
+        if (!listen.compareAndSet(false, true)) {
+            // return null; //CompletableFuture.failedFuture(new IllegalStateException("Attempted to start an already started server listening on " + listenAddress));
+        }
         try {
             try {
                 connectFuture = new UtpConnectFutureImpl();
@@ -134,9 +135,8 @@ public class UTPClient implements
             }
             try {
                 this.setDgSocket(new DatagramSocket());
-                reciever = new UtpRecieveRunnable(getDgSocket(), this);
-                reciever.start();
 
+                startReading();
 
                 this.remoteAddress = address;
                 this.connectionIdRecieving = connectionId;
@@ -160,6 +160,23 @@ public class UTPClient implements
 
         return connectFuture;
     }
+
+
+    private void startReading() {
+        CompletableFuture.runAsync(() -> {
+            while (listen.get()) {
+                byte[] buffer = new byte[MAX_UDP_HEADER_LENGTH + MAX_UTP_PACKET_LENGTH];
+                DatagramPacket dgpkt = new DatagramPacket(buffer, buffer.length);
+                try {
+                    getDgSocket().receive(dgpkt);
+                    recievePacket(dgpkt);
+                } catch (IOException e) {
+                    break;
+                }
+            }
+        });
+    }
+
 
 
     public long getConnectionIdsending() {
@@ -388,9 +405,8 @@ public class UTPClient implements
     }
 
     protected void abortImpl() {
-        if (reciever != null) {
-            reciever.graceFullInterrupt();
-        } else if (server != null) {
+        //stop  CompletableFuture.runAsync(()  reader
+        if (server != null) {
             server.unregister(this);
         }
     }
@@ -475,6 +491,7 @@ public class UTPClient implements
 
         return ackPacket;
     }
+
 
 
     public void close() {

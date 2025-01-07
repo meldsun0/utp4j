@@ -62,8 +62,6 @@ public class UTPServer implements UtpPacketRecievable {
                 } catch (IOException e) {
                     break;
                 }
-
-
             }
         });
     }
