@@ -140,7 +140,7 @@ public class UTPServer implements UtpPacketRecievable {
         connectionIds.remove((int) UTPClient.getConnectionIdRecievingIncoming() & 0xFFFF);
     }
 
-    public UtpWriteFuture write(ByteBuffer dataToSend) throws ExecutionException, InterruptedException {
+    public  CompletableFuture<Void> write(ByteBuffer dataToSend) throws ExecutionException, InterruptedException {
         return this.initAcceptanceFuture.get().write(dataToSend);
     }
 }

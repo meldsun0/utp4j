@@ -28,6 +28,7 @@ import java.net.DatagramPacket;
 import java.nio.ByteBuffer;
 import java.util.Queue;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -44,16 +45,17 @@ public class UtpWritingRunnable extends Thread implements Runnable {
     private final UtpAlgorithm algorithm;
     private IOException possibleException = null;
     private final MicroSecondsTimeStamp timeStamper;
-    private final UtpWriteFutureImpl future;
+
+    private CompletableFuture<Void> writerFuture;
 
     private final static Logger log = LoggerFactory.getLogger(UtpWritingRunnable.class);
 
     public UtpWritingRunnable(UTPClient channel, ByteBuffer buffer,
-                              MicroSecondsTimeStamp timeStamper, UtpWriteFutureImpl future) {
+                              MicroSecondsTimeStamp timeStamper, CompletableFuture<Void>  writerFuture) {
         this.buffer = buffer;
         this.channel = channel;
         this.timeStamper = timeStamper;
-        this.future = future;
+        this.writerFuture = writerFuture;
         algorithm = new UtpAlgorithm(timeStamper, channel.getRemoteAdress());
     }
 
@@ -140,7 +142,7 @@ public class UtpWritingRunnable extends Thread implements Runnable {
         log.debug("WRITER OUT");
         channel.removeWriter();
 
-        future.finished(possibleExp);
+        writerFuture.complete(null);
     }
 
 

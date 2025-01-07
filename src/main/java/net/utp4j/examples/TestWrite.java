@@ -28,8 +28,8 @@ public class TestWrite {
         CompletableFuture<Void> cFuture = chanel.connect(new InetSocketAddress("localhost", 13345), 333);
         cFuture.get();
 
-        UtpWriteFuture fut = chanel.write(buffer);
-        fut.block();
+        CompletableFuture<Void> fut = chanel.write(buffer);
+        fut.get();
         System.out.println("writing test done");
         chanel.close();
 

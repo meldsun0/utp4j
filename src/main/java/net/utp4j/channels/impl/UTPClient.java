@@ -78,6 +78,8 @@ public class UTPClient implements UtpPacketRecievable {
     private CompletableFuture<Void> incomingConnectionFuture;
     private CompletableFuture<Void> connection;
 
+    private CompletableFuture<Void> writerFuture;
+
     private static final org.apache.logging.log4j.Logger LOG = LogManager.getLogger(UTPClient.class);
 
     public UTPClient() {
@@ -367,16 +369,11 @@ public class UTPClient implements UtpPacketRecievable {
 
     }
 
-    public UtpWriteFuture write(ByteBuffer src) {
-        UtpWriteFutureImpl future = null;
-        try {
-            future = new UtpWriteFutureImpl();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-        writer = new UtpWritingRunnable(this, src, timeStamper, future);
+    public CompletableFuture<Void> write(ByteBuffer src) {
+        this.writerFuture = new CompletableFuture<Void>();
+        writer = new UtpWritingRunnable(this, src, timeStamper, writerFuture);
         writer.start();
-        return future;
+        return this.writerFuture;
     }
 
     public BlockingQueue<UtpTimestampedPacketDTO> getDataGramQueue() {
