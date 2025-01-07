@@ -31,10 +31,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
-import java.net.SocketAddress;
-import java.net.SocketTimeoutException;
+import java.net.*;
 import java.nio.ByteBuffer;
 import java.util.Random;
 import java.util.concurrent.*;
@@ -135,7 +132,7 @@ public class UTPClient implements
      * @param address
      * @return {@link UtpConnectFuture}
      */
-    public UtpConnectFuture connect(SocketAddress address) {
+    public UtpConnectFuture connect(SocketAddress address, long connectionId) {
         stateLock.lock();
         try {
             try {
@@ -145,12 +142,16 @@ public class UTPClient implements
                 return null;
             }
             try {
-                /* underlying impl does it's connection setup */
-                connectImpl(connectFuture);
+                reciever = new UtpRecieveRunnable(getDgSocket(), this);
+                reciever.start();
 
                 /* fill packet, set initial variables and send packet */
-                setRemoteAddress(address);
-                setupConnectionId();
+                this.remoteAddress = address;
+                setConnectionIdRecieving(connectionId);
+                setConnectionIdsending(connectionId+ 1);
+
+
+
                 setSequenceNumber(DEF_SEQ_START);
 
                 UtpPacket synPacket = UtpPacketUtils.createSynPacket();
@@ -231,16 +232,6 @@ public class UTPClient implements
             seqNumber = 1;
         }
         setSequenceNumber(seqNumber);
-    }
-
-
-    private void setupConnectionId() {
-        Random rnd = new Random();
-        int max = (int) (MAX_USHORT - 1);
-        long rndInt = rnd.nextInt(max);
-        setConnectionIdRecieving(rndInt);
-        setConnectionIdsending(rndInt + 1);
-
     }
 
 
@@ -393,7 +384,7 @@ public class UTPClient implements
 
         if (acceptSyn(udpPacket)) {
             int timeStamp = timeStamper.utpTimeStamp();
-            setRemoteAddress(udpPacket.getSocketAddress());
+            this.remoteAddress = udpPacket.getSocketAddress();
             setConnectionIdsFromPacket(utpPacket);
             setupRandomSeqNumber();
             setAckNrFromPacketSqNr(utpPacket);
@@ -409,7 +400,7 @@ public class UTPClient implements
                 setState(CONNECTED);
             } catch (IOException exp) {
                 // TODO: In future?
-                setRemoteAddress(null);
+                this.remoteAddress = null;
                 setConnectionIdsending((short) 0);
                 setConnectionIdRecieving((short) 0);
                 setAckNumber(0);
@@ -444,12 +435,6 @@ public class UTPClient implements
         int connIdRec = (connId & 0xFFFF) + 1;
         setConnectionIdsending(connIdSender);
         setConnectionIdRecieving(connIdRec);
-
-    }
-
-    protected void connectImpl(UtpConnectFutureImpl future) {
-        reciever = new UtpRecieveRunnable(getDgSocket(), this);
-        reciever.start();
 
     }
 
@@ -611,9 +596,6 @@ public class UTPClient implements
 
     }
 
-    public void setRemoteAddress(SocketAddress remoteAdress) {
-        this.remoteAddress = remoteAdress;
-    }
 
     public void returnFromReading() {
         reader = null;
@@ -651,7 +633,7 @@ public class UTPClient implements
     public void connectionFailed(IOException exp) {
         log.debug("got failing message");
         setSequenceNumber(DEF_SEQ_START);
-        setRemoteAddress(null);
+        this.remoteAddress = null;
         abortImpl();
         setState(CLOSED);
         retryConnectionTimeScheduler.shutdown();
@@ -726,4 +708,7 @@ public class UTPClient implements
         return pkt;
     }
 
+    public void setRemoteAddress(InetSocketAddress localhost) {
+        this.remoteAddress = localhost;
+    }
 }
