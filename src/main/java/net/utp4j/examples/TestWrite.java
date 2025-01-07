@@ -24,11 +24,10 @@ public class TestWrite {
         System.out.println("file read");
 
         UTPClient chanel = UTPClient.open();
-        UtpConnectFuture cFuture = chanel.connect(new InetSocketAddress("localhost", 13345), 333);
-        cFuture.block();
+        chanel.connect(new InetSocketAddress("localhost", 13345), 333);
 
-        UtpWriteFuture fut = chanel.write(buffer);
-        fut.block();
+
+        chanel.write(buffer);
         System.out.println("writing test done");
         chanel.close();
 

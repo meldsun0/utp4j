@@ -14,6 +14,7 @@
  */
 package net.utp4j.channels.impl;
 
+import com.sun.jdi.VoidValue;
 import net.utp4j.channels.UtpSocketState;
 import net.utp4j.channels.futures.UtpConnectFuture;
 import net.utp4j.channels.futures.UtpWriteFuture;
@@ -35,6 +36,7 @@ import java.net.*;
 import java.nio.ByteBuffer;
 import java.util.Random;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantLock;
 
 import static net.utp4j.channels.UtpSocketState.*;
@@ -110,8 +112,11 @@ public class UTPClient implements
     private int eofPacket;
 
 
-    public UTPClient(){
+    private AtomicBoolean listen = new AtomicBoolean(false);
+    private final CompletableFuture<Void> initAcceptanceFuture;
 
+    public UTPClient(){
+        this.initAcceptanceFuture = new CompletableFuture<>();
     }
 
     public static UTPClient open() throws IOException {
@@ -126,25 +131,25 @@ public class UTPClient implements
         return c;
     }
 
-    /**
-     * Connects this Socket to the specified address
-     *
-     * @param address
-     * @return {@link UtpConnectFuture}
-     */
-    public UtpConnectFuture connect(SocketAddress address, long connectionId) {
-        stateLock.lock();
-        try {
-            try {
-                connectFuture = new UtpConnectFutureImpl();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-                return null;
-            }
-            try {
-                reciever = new UtpRecieveRunnable(getDgSocket(), this);
-                reciever.start();
+    public void connect(SocketAddress address, long connectionId) {
+        if (!listen.compareAndSet(false, true)) {
 
+        }
+        stateLock.lock();
+            try {
+
+                    CompletableFuture.runAsync(() -> {
+                        while (listen.get()) {
+                            byte[] buffer = new byte[MAX_UDP_HEADER_LENGTH + MAX_UTP_PACKET_LENGTH];
+                            DatagramPacket dgpkt = new DatagramPacket(buffer, buffer.length);
+                            try {
+                                dgSocket.receive(dgpkt);
+                                recievePacket(dgpkt);
+                            } catch (IOException e) {
+                                break;
+                            }
+                        }
+                    });
 
                 this.remoteAddress = address;
                 this.connectionIdRecieving = connectionId;
@@ -156,17 +161,13 @@ public class UTPClient implements
                 sendPacket(synPacket);
                 setState(SYN_SENT);
                 printState("[Syn send] ");
-
                 incrementSequenceNumber();
                 startConnectionTimeOutCounter(synPacket);
-            } catch (IOException exp) {
+            } catch (Exception exp) {
                 // DO NOTHING, let's try later with reconnect runnable
-            }
-        } finally {
+            }finally {
             stateLock.unlock();
         }
-
-        return connectFuture;
     }
 
 
@@ -297,7 +298,7 @@ public class UTPClient implements
             setState(CONNECTED);
             printState("[SynAck recieved] ");
             disableConnectionTimeOutCounter();
-            connectFuture.finished(null);
+            this.initAcceptanceFuture.complete(null);
             stateLock.unlock();
         } else {
             sendResetPacket(udpPacket.getSocketAddress());
@@ -426,16 +427,21 @@ public class UTPClient implements
         }
     }
 
-    public UtpWriteFuture write(ByteBuffer src) {
-        UtpWriteFutureImpl future = null;
-        try {
-            future = new UtpWriteFutureImpl();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-        writer = new UtpWritingRunnable(this, src, timeStamper, future);
-        writer.start();
-        return future;
+    public void write(ByteBuffer src) {
+        this.initAcceptanceFuture.whenComplete((result, ex) -> {
+            if (ex != null) {
+                System.err.println("Task failed with exception: " + ex.getMessage());
+            } else {
+                UtpWriteFutureImpl future = null;
+                try {
+                    future = new UtpWriteFutureImpl();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                writer = new UtpWritingRunnable(this, src, timeStamper, future);
+                writer.start();
+            }
+        });
     }
 
     public BlockingQueue<UtpTimestampedPacketDTO> getDataGramQueue() {

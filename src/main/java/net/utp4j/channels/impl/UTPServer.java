@@ -62,8 +62,6 @@ public class UTPServer implements UtpPacketRecievable {
                 } catch (IOException e) {
                     break;
                 }
-
-
             }
         });
     }
@@ -76,30 +74,33 @@ public class UTPServer implements UtpPacketRecievable {
             return;
         }
         if (packet != null ) {
-            boolean registered = false;
-            UTPClient utpChannel = null;
             try {
-                utpChannel =  UTPClient.open();
+                UTPClient utpChannel =  UTPClient.open();
                 utpChannel.setDgSocket(this.socket);
                 utpChannel.recievePacket(packet);
                 utpChannel.setServer(this);
 
                 if (isChannelRegistrationNecessary(utpChannel)) {
                     connectionIds.put((int) (utpChannel.getConnectionIdRecieving() & 0xFFFF), utpChannel);
+                    this.initAcceptanceFuture.complete(utpChannel);
                 }else{
-                    utpChannel = null;
                     this.initAcceptanceFuture.completeExceptionally(new RuntimeException("Something went wrong!"));
                 }
+
             } catch (IOException e) {
                 this.initAcceptanceFuture.completeExceptionally(new RuntimeException("Something went wrong!"));
             }
-            this.initAcceptanceFuture.complete(utpChannel);
+
         }
     }
 
 
     public UtpReadFutureImpl read(ByteBuffer dst) throws ExecutionException, InterruptedException {
         return this.initAcceptanceFuture.get().read(dst);
+    }
+
+    public void write(ByteBuffer dataToSend) throws ExecutionException, InterruptedException {
+        this.initAcceptanceFuture.get().write(dataToSend);
     }
 
     /*
@@ -128,9 +129,8 @@ public class UTPServer implements UtpPacketRecievable {
         } else {
             UtpPacket utpPacket = UtpPacketUtils.extractUtpPacket(packet);
             UTPClient client = connectionIds.get(utpPacket.getConnectionId() & 0xFFFF);
-            if (client != null) {
-                client.recievePacket(packet);
-            }
+            client.recievePacket(packet);
+
         }
     }
 
@@ -167,7 +167,5 @@ public class UTPServer implements UtpPacketRecievable {
         connectionIds.remove((int) UTPClient.getConnectionIdRecieving() & 0xFFFF);
     }
 
-    public UtpWriteFuture write(ByteBuffer dataToSend) throws ExecutionException, InterruptedException {
-        return this.initAcceptanceFuture.get().write(dataToSend);
-    }
+
 }
