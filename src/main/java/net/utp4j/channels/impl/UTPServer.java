@@ -66,9 +66,6 @@ public class UTPServer implements UtpPacketRecievable {
         });
     }
 
-    /*
-     * handles syn packet.
-     */
     private void synRecieved(DatagramPacket packet) {
         if (handleDoubleSyn(packet)) {
             return;
@@ -134,12 +131,6 @@ public class UTPServer implements UtpPacketRecievable {
         }
     }
 
-
-
-
-    /*
-     * true if channel reg. is required.
-     */
     private boolean isChannelRegistrationNecessary(UTPClient channel) {
         return connectionIds.get(channel.getConnectionIdRecieving()) == null
                 && channel.getState() != UtpSocketState.SYN_ACKING_FAILED;
@@ -158,14 +149,7 @@ public class UTPServer implements UtpPacketRecievable {
         }
     }
 
-    /**
-     * Unregisters the channel.
-     *
-     * @param UTPClient
-     */
     public void unregister(UTPClient UTPClient) {
         connectionIds.remove((int) UTPClient.getConnectionIdRecieving() & 0xFFFF);
     }
-
-
 }

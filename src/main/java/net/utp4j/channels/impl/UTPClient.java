@@ -14,22 +14,18 @@
  */
 package net.utp4j.channels.impl;
 
-import com.sun.jdi.VoidValue;
 import net.utp4j.channels.UtpSocketState;
-import net.utp4j.channels.futures.UtpConnectFuture;
-import net.utp4j.channels.futures.UtpWriteFuture;
 import net.utp4j.channels.impl.alg.UtpAlgConfiguration;
 import net.utp4j.channels.impl.conn.ConnectionTimeOutRunnable;
 import net.utp4j.channels.impl.conn.UtpConnectFutureImpl;
 import net.utp4j.channels.impl.read.UtpReadFutureImpl;
 import net.utp4j.channels.impl.read.UtpReadingRunnable;
 import net.utp4j.channels.impl.recieve.UtpPacketRecievable;
-import net.utp4j.channels.impl.recieve.UtpRecieveRunnable;
 import net.utp4j.channels.impl.write.UtpWriteFutureImpl;
 import net.utp4j.channels.impl.write.UtpWritingRunnable;
 import net.utp4j.data.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
 import java.net.*;
@@ -81,9 +77,7 @@ public class UTPClient implements
     /* lock for the socket state* */
     protected final ReentrantLock stateLock = new ReentrantLock();
 
-    /* logger */
-    private static final Logger log = LoggerFactory
-            .getLogger(UTPClient.class);
+
 
     /* Current state of the socket */
     protected volatile UtpSocketState state = null;
@@ -96,11 +90,9 @@ public class UTPClient implements
 
 
 
-
-
     private final BlockingQueue<UtpTimestampedPacketDTO> queue = new LinkedBlockingQueue<UtpTimestampedPacketDTO>();
 
-    private UtpRecieveRunnable reciever;
+
     private UtpWritingRunnable writer;
     private UtpReadingRunnable reader;
     private final Object sendLock = new Object();
@@ -112,6 +104,7 @@ public class UTPClient implements
     private int eofPacket;
 
 
+    private static final Logger LOG = LogManager.getLogger(UTPClient.class);
     private AtomicBoolean listen = new AtomicBoolean(false);
     private final CompletableFuture<Void> initAcceptanceFuture;
 
@@ -132,13 +125,13 @@ public class UTPClient implements
     }
 
     public void connect(SocketAddress address, long connectionId) {
+        LOG.info("Starting UTP Client connecting to {}", connectionId);
         if (!listen.compareAndSet(false, true)) {
 
         }
         stateLock.lock();
             try {
-
-                    CompletableFuture.runAsync(() -> {
+                CompletableFuture.runAsync(() -> {
                         while (listen.get()) {
                             byte[] buffer = new byte[MAX_UDP_HEADER_LENGTH + MAX_UTP_PACKET_LENGTH];
                             DatagramPacket dgpkt = new DatagramPacket(buffer, buffer.length);
@@ -213,7 +206,7 @@ public class UTPClient implements
         String state = "[ConnID Sending: " + connectionIdSending + "] "
                 + "[ConnID Recv: " + connectionIdRecieving + "] [SeqNr. "
                 + sequenceNumber + "] [AckNr: " + ackNumber + "]";
-        log.debug(msg + state);
+        LOG.debug(msg + state);
 
     }
 
@@ -375,7 +368,7 @@ public class UTPClient implements
                     timestampDifference,
                     UtpAlgConfiguration.MAX_PACKET_SIZE * 1000L);
             try {
-                log.debug("sending syn ack");
+                LOG.debug("sending syn ack");
                 sendPacket(ackPacket);
                 setState(CONNECTED);
             } catch (IOException exp) {
@@ -393,7 +386,7 @@ public class UTPClient implements
     }
 
     private void sendResetPacket(SocketAddress addr) {
-        log.debug("Sending RST packet");
+        LOG.debug("Sending RST packet");
 
     }
 
@@ -419,12 +412,28 @@ public class UTPClient implements
 
     }
 
-    protected void abortImpl() {
-        if (reciever != null) {
-            reciever.graceFullInterrupt();
-        } else if (server != null) {
+
+
+    protected void unregisterServer() {
+         if (server != null) {
             server.unregister(this);
         }
+    }
+    public void close() {
+        if (listen.compareAndSet(true, false)) {
+            LOG.info("Stopping UTP server listening on {}", this.connectionIdRecieving);
+            unregisterServer();
+            if (isReading()) {
+                reader.graceFullInterrupt();
+            }
+            if (isWriting()) {
+                writer.graceFullInterrupt();
+            }
+        } else {
+            LOG.warn("An attempt to stop already stopping/stopped UTP server");
+        }
+
+
     }
 
     public void write(ByteBuffer src) {
@@ -514,15 +523,7 @@ public class UTPClient implements
     }
 
 
-    public void close() {
-        abortImpl();
-        if (isReading()) {
-            reader.graceFullInterrupt();
-        }
-        if (isWriting()) {
-            writer.graceFullInterrupt();
-        }
-    }
+
 
     public boolean isReading() {
         return (reader != null && reader.isRunning());
@@ -603,7 +604,7 @@ public class UTPClient implements
                 .newSingleThreadScheduledExecutor();
         ConnectionTimeOutRunnable runnable = new ConnectionTimeOutRunnable(
                 synPacket, this, stateLock);
-        log.debug("starting scheduler");
+        LOG.debug("starting scheduler");
         // retryConnectionTimeScheduler.schedule(runnable, 2, TimeUnit.SECONDS);
         retryConnectionTimeScheduler.scheduleWithFixedDelay(runnable,
                 UtpAlgConfiguration.CONNECTION_ATTEMPT_INTERVALL_MILLIS,
@@ -617,10 +618,10 @@ public class UTPClient implements
      * @param exp - is optional.
      */
     public void connectionFailed(IOException exp) {
-        log.debug("got failing message");
+        LOG.debug("got failing message");
         this.sequenceNumber = DEF_SEQ_START;
         this.remoteAddress = null;
-        abortImpl();
+        unregisterServer();
         setState(CLOSED);
         retryConnectionTimeScheduler.shutdown();
         retryConnectionTimeScheduler = null;
@@ -637,12 +638,12 @@ public class UTPClient implements
         stateLock.lock();
         try {
             int attempts = getConnectionAttempts();
-            log.debug("attempt: " + attempts);
+            LOG.debug("attempt: " + attempts);
             if (getState() == UtpSocketState.SYN_SENT) {
                 try {
                     if (attempts < UtpAlgConfiguration.MAX_CONNECTION_ATTEMPTS) {
                         incrementConnectionAttempts();
-                        log.debug("REATTEMPTING CONNECTION");
+                        LOG.debug("REATTEMPTING CONNECTION");
                         sendPacket(synPacket);
                     } else {
                         connectionFailed(new SocketTimeoutException());
