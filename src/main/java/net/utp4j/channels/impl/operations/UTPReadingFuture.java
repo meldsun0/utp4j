@@ -23,6 +23,8 @@ import org.apache.logging.log4j.LogManager;
 public class UTPReadingFuture {
 
     private static final int PACKET_DIFF_WARP = 50000;
+    private int lastPayloadLength = UtpAlgConfiguration.MAX_PACKET_SIZE;;
+
     private final ByteBuffer buffer;
 
     private final SkippedPacketBuffer skippedBuffer = new SkippedPacketBuffer();
@@ -30,7 +32,7 @@ public class UTPReadingFuture {
     private MicroSecondsTimeStamp timeStamper;
     private long totalPayloadLength = 0;
     private long lastPacketTimestamp;
-    private int lastPayloadLength;
+
 
     private long nowtimeStamp;
     private long lastPackedRecieved;
@@ -47,7 +49,6 @@ public class UTPReadingFuture {
         this.channel = channel;
         this.buffer = buff;
         this.timeStamper = timestamp;
-        this.lastPayloadLength = UtpAlgConfiguration.MAX_PACKET_SIZE;
         this.startReadingTimeStamp = timestamp.timeStamp();
         this.readFuture = new CompletableFuture<>();
     }

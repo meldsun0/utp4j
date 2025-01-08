@@ -1,7 +1,6 @@
 package net.utp4j.channels.impl;
 
 import net.utp4j.channels.UtpSocketState;
-import net.utp4j.channels.impl.operations.UtpPacketRecievable;
 import net.utp4j.data.UtpPacket;
 import net.utp4j.data.UtpPacketUtils;
 import org.apache.logging.log4j.LogManager;
@@ -22,18 +21,16 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import static net.utp4j.data.UtpPacketUtils.MAX_UDP_HEADER_LENGTH;
 import static net.utp4j.data.UtpPacketUtils.MAX_UTP_PACKET_LENGTH;
 
-public class UTPServer implements UtpPacketRecievable {
+public class UTPServer {
 
     private static final Logger LOG = LogManager.getLogger(UTPServer.class);
-
-    private final Map<Integer, UTPClient> connectionIds = new HashMap<>();
-    protected DatagramSocket socket;
-
-    private AtomicBoolean listen = new AtomicBoolean(false);
+    private final AtomicBoolean listen = new AtomicBoolean(false);
     private final InetSocketAddress listenAddress;
 
     private final CompletableFuture<UTPClient> initAcceptanceFuture;
-    private CompletableFuture<Void> readerFuture;
+
+    protected DatagramSocket socket;
+    private final Map<Integer, UTPClient> connectionIds = new HashMap<>();
 
     public UTPServer(InetSocketAddress listenAddress) {
         this.listenAddress = listenAddress;
@@ -43,7 +40,7 @@ public class UTPServer implements UtpPacketRecievable {
     public void start() throws SocketException {
         LOG.info("Starting UTP server listening on {}", listenAddress);
         if (!listen.compareAndSet(false, true)) {
-           // return null; //CompletableFuture.failedFuture(new IllegalStateException("Attempted to start an already started server listening on " + listenAddress));
+            this.initAcceptanceFuture.completeExceptionally(new IllegalStateException("Attempted to start an already started server listening on " + listenAddress));
         }
         this.socket = new DatagramSocket(this.listenAddress);
         this.startReading();
@@ -51,7 +48,7 @@ public class UTPServer implements UtpPacketRecievable {
 
 
     private void startReading() {
-       this.readerFuture = CompletableFuture.runAsync(() -> {
+       CompletableFuture.runAsync(() -> {
             while (listen.get()) {
                 byte[] buffer = new byte[MAX_UDP_HEADER_LENGTH + MAX_UTP_PACKET_LENGTH];
                 DatagramPacket dgpkt = new DatagramPacket(buffer, buffer.length);
@@ -65,9 +62,7 @@ public class UTPServer implements UtpPacketRecievable {
         });
     }
 
-    /*
-     * handles syn packet.
-     */
+
     private void synRecieved(DatagramPacket packet) {
         if (handleDoubleSyn(packet)) {
             return;
@@ -90,6 +85,10 @@ public class UTPServer implements UtpPacketRecievable {
         return this.initAcceptanceFuture.get().read(dst);
     }
 
+    public  CompletableFuture<Void> write(ByteBuffer dataToSend) throws ExecutionException, InterruptedException {
+        return this.initAcceptanceFuture.get().write(dataToSend);
+    }
+
     private boolean handleDoubleSyn(DatagramPacket packet) {
         UtpPacket pkt = UtpPacketUtils.extractUtpPacket(packet);
         int connId = pkt.getConnectionId();
@@ -103,7 +102,6 @@ public class UTPServer implements UtpPacketRecievable {
         return false;
     }
 
-    @Override
     public void recievePacket(DatagramPacket packet) {
         if (UtpPacketUtils.isSynPkt(packet)) {
             synRecieved(packet);
@@ -127,18 +125,13 @@ public class UTPServer implements UtpPacketRecievable {
             if (connectionIds.isEmpty()) {
                 socket.close();
                 this.initAcceptanceFuture.get().close();
-                this.readerFuture.complete(null);
             }
         } else {
-            LOG.warn("An attempt to stop already stopping/stopped UTP server");
+            LOG.info("An attempt to stop already stopping/stopped UTP server");
         }
     }
 
     public void unregister(UTPClient UTPClient) {
         connectionIds.remove((int) UTPClient.getConnectionIdRecievingIncoming() & 0xFFFF);
-    }
-
-    public  CompletableFuture<Void> write(ByteBuffer dataToSend) throws ExecutionException, InterruptedException {
-        return this.initAcceptanceFuture.get().write(dataToSend);
     }
 }
