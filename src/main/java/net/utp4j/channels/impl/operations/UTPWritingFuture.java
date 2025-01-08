@@ -2,7 +2,6 @@
 package net.utp4j.channels.impl.operations;
 
 import net.utp4j.channels.impl.UTPClient;
-import net.utp4j.channels.impl.UTPServer;
 import net.utp4j.channels.impl.UtpTimestampedPacketDTO;
 import net.utp4j.channels.impl.alg.UtpAlgorithm;
 import net.utp4j.data.MicroSecondsTimeStamp;
@@ -20,53 +19,60 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
-public class UtpWritingRunnable extends Thread implements Runnable {
+public class UTPWritingFuture {
 
-    private static final Logger LOG = LogManager.getLogger(UtpWritingRunnable.class);
+    private static final Logger LOG = LogManager.getLogger(UTPWritingFuture.class);
 
     private final ByteBuffer buffer;
     private volatile boolean graceFullInterrupt;
     private final UTPClient channel;
     private final UtpAlgorithm algorithm;
     private final MicroSecondsTimeStamp timeStamper;
-
     private CompletableFuture<Void> writerFuture;
+    private CompletableFuture<Void> asyncWriterFuture ;
 
-    public UtpWritingRunnable(UTPClient channel, ByteBuffer buffer,
-                              MicroSecondsTimeStamp timeStamper, CompletableFuture<Void> writerFuture) {
+    public UTPWritingFuture(UTPClient channel, ByteBuffer buffer,
+                            MicroSecondsTimeStamp timeStamper) {
         this.buffer = buffer;
         this.channel = channel;
         this.timeStamper = timeStamper;
-        this.writerFuture = writerFuture;
-        algorithm = new UtpAlgorithm(timeStamper, channel.getRemoteAdress());
+        this.algorithm = new UtpAlgorithm(timeStamper, channel.getRemoteAdress());
+        this.writerFuture = new CompletableFuture<>();
     }
 
 
-    @Override
-    public void run() {
-        boolean successfull = true;
-        try {
-            initializeAlgorithm();
-            buffer.flip();
-            while (continueSending()) {
-                if (!processAcknowledgements()) {
-                    LOG.debug("Graceful interrupt due to lack of acknowledgements.");
-                    break;
-                }
-                resendPendingPackets();
+    public CompletableFuture<Void> startWriting() {
+      this.asyncWriterFuture = CompletableFuture.runAsync(() -> {
+            boolean successfull = false;
+            try {
+                initializeAlgorithm();
+                buffer.flip();
+                while (continueSending()) {
+                    if (!processAcknowledgements()) {
+                        LOG.debug("Graceful interrupt due to lack of acknowledgements.");
+                        break;
+                    }
 
-                if (algorithm.isTimedOut()) {
-                    LOG.debug("Timed out. Stopping transmission.");
-                    break;
+                    resendPendingPackets();
+
+                    if (algorithm.isTimedOut()) {
+                        LOG.debug("Timed out. Stopping transmission.");
+                        break;
+                    }
+                    sendNextPackets();
                 }
-                sendNextPackets();
+                successfull = true;
+            } catch (IOException exp) {
+                LOG.debug("Something went wrong!");
+            } finally {
+                finalizeTransmission(successfull);
             }
-        } catch (IOException exp) {
-            successfull = false;
-            LOG.debug("Something went wrong!");
-        } finally {
-            finalizeTransmission(successfull);
-        }
+        });
+        return writerFuture;
+    }
+
+    public void graceFullInterrupt() {
+        graceFullInterrupt = true;
     }
 
     private void initializeAlgorithm() {
@@ -142,22 +148,18 @@ public class UtpWritingRunnable extends Thread implements Runnable {
         return udpPacket;
     }
 
-
-
     private boolean continueSending() {
         return !graceFullInterrupt && !allPacketsAckedSendAndAcked();
     }
 
     private boolean allPacketsAckedSendAndAcked() {
-
 //		return finSend && algorithm.areAllPacketsAcked() && !buffer.hasRemaining();
         return algorithm.areAllPacketsAcked() && !buffer.hasRemaining();
     }
 
-    public void graceFullInterrupt() {
-        graceFullInterrupt = true;
+    public boolean isAlive() {
+        return this.writerFuture.isDone();
     }
-
 }
 
 /*

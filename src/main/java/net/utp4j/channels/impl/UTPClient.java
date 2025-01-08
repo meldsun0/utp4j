@@ -19,7 +19,7 @@ import net.utp4j.channels.impl.alg.UtpAlgConfiguration;
 import net.utp4j.channels.impl.conn.ConnectionTimeOutRunnable;
 import net.utp4j.channels.impl.operations.UtpReadingRunnable;
 import net.utp4j.channels.impl.operations.UtpPacketRecievable;
-import net.utp4j.channels.impl.operations.UtpWritingRunnable;
+import net.utp4j.channels.impl.operations.UTPWritingFuture;
 import net.utp4j.data.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -60,7 +60,7 @@ public class UTPClient implements UtpPacketRecievable {
 
     private final BlockingQueue<UtpTimestampedPacketDTO> queue = new LinkedBlockingQueue<UtpTimestampedPacketDTO>();
 
-    private UtpWritingRunnable writer;
+    private UTPWritingFuture writer;
     private UtpReadingRunnable reader;
     private final Object sendLock = new Object();
 
@@ -363,10 +363,9 @@ public class UTPClient implements UtpPacketRecievable {
     }
 
     public CompletableFuture<Void> write(ByteBuffer src) {
-        CompletableFuture<Void> writerFuture = new CompletableFuture<Void>();
-        writer = new UtpWritingRunnable(this, src, timeStamper, writerFuture);
-        writer.start();
-        return writerFuture;
+        this.writer = new UTPWritingFuture(this, src, timeStamper);
+        return writer.startWriting();
+
     }
 
     public CompletableFuture<Void> read(ByteBuffer dst) {
