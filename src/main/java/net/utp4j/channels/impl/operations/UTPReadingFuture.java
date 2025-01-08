@@ -1,17 +1,3 @@
-/* Copyright 2013 Ivan Iljkic
- *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not
- * use this file except in compliance with the License. You may obtain a copy of
- * the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations under
- * the License.
- */
 package net.utp4j.channels.impl.operations;
 
 import net.utp4j.channels.impl.UTPClient;
@@ -21,8 +7,8 @@ import net.utp4j.data.MicroSecondsTimeStamp;
 import net.utp4j.data.SelectiveAckHeaderExtension;
 import net.utp4j.data.UtpPacket;
 import net.utp4j.data.bytes.UnsignedTypesUtil;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.Logger;
+
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -31,27 +17,20 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
-/**
- * Reads incomming data.
- *
- * @author Ivan Iljkic (i.iljkic@gmail.com)
- */
-public class UtpReadingRunnable extends Thread implements Runnable {
+import org.apache.logging.log4j.LogManager;
+
+
+public class UTPReadingFuture {
 
     private static final int PACKET_DIFF_WARP = 50000;
-    private IOException exp;
     private final ByteBuffer buffer;
-    private final UTPClient channel;
+
     private final SkippedPacketBuffer skippedBuffer = new SkippedPacketBuffer();
-    private boolean exceptionOccured = false;
     private boolean graceFullInterrupt;
-    private boolean isRunning;
     private MicroSecondsTimeStamp timeStamper;
     private long totalPayloadLength = 0;
     private long lastPacketTimestamp;
     private int lastPayloadLength;
-
-    private final CompletableFuture<Void> readFuture;
 
     private long nowtimeStamp;
     private long lastPackedRecieved;
@@ -60,96 +39,79 @@ public class UtpReadingRunnable extends Thread implements Runnable {
     // in case we ack every x-th packet, this is the counter.
     private int currentPackedAck = 0;
 
-    private static final Logger log = LoggerFactory.getLogger(UtpReadingRunnable.class);
+    private static final Logger LOG = LogManager.getLogger(UTPReadingFuture.class);
+    private final UTPClient channel;
+    private final CompletableFuture<Void> readFuture;
 
-    public UtpReadingRunnable(UTPClient channel, ByteBuffer buff, MicroSecondsTimeStamp timestamp,
-                              CompletableFuture<Void> readFuture) {
+    public UTPReadingFuture(UTPClient channel, ByteBuffer buff, MicroSecondsTimeStamp timestamp) {
         this.channel = channel;
         this.buffer = buff;
         this.timeStamper = timestamp;
-        this.readFuture = readFuture;
-        lastPayloadLength = UtpAlgConfiguration.MAX_PACKET_SIZE;
+        this.lastPayloadLength = UtpAlgConfiguration.MAX_PACKET_SIZE;
         this.startReadingTimeStamp = timestamp.timeStamp();
+        this.readFuture = new CompletableFuture<>();
     }
 
-    public int getBytesRead() {
-        return 0;
-    }
 
-    public IOException getException() {
-        return exp;
-    }
-
-    public boolean hasExceptionOccured() {
-        return false;
-    }
-
-    @Override
-    public void run() {
-//		buffer.flip();
-
-        isRunning = true;
-        IOException exp = null;
-        while (continueReading()) {
-            BlockingQueue<UtpTimestampedPacketDTO> queue = channel.getDataGramQueue();
+    public CompletableFuture<Void> startReading() {
+        CompletableFuture.runAsync(() -> {
+            boolean successful = false;
+            IOException exception = null;
             try {
-                UtpTimestampedPacketDTO timestampedPair = queue.poll(UtpAlgConfiguration.TIME_WAIT_AFTER_LAST_PACKET / 2, TimeUnit.MICROSECONDS);
-                nowtimeStamp = timeStamper.timeStamp();
-                if (timestampedPair != null) {
-                    currentPackedAck++;
-//					log.debug("Seq: " + (timestampedPair.utpPacket().getSequenceNumber() & 0xFFFF));
-                    lastPackedRecieved = timestampedPair.stamp();
-                    if (isLastPacket(timestampedPair)) {
-                        gotLastPacket = true;
-                        log.debug("GOT LAST PACKET");
-                        lastPacketTimestamp = timeStamper.timeStamp();
-                    }
-                    if (isPacketExpected(timestampedPair.utpPacket())) {
-                        handleExpectedPacket(timestampedPair);
-                    } else {
-                        handleUnexpectedPacket(timestampedPair);
-                    }
-                    if (ackThisPacket()) {
-                        currentPackedAck = 0;
-                    }
-                }
+                while (continueReading()) {
+                    BlockingQueue<UtpTimestampedPacketDTO> queue = channel.getDataGramQueue();
+                    UtpTimestampedPacketDTO packetDTO = queue.poll(UtpAlgConfiguration.TIME_WAIT_AFTER_LAST_PACKET / 2, TimeUnit.MICROSECONDS);
+                    nowtimeStamp = timeStamper.timeStamp();
+                    if (packetDTO != null) {
+                        currentPackedAck++;
+                        lastPackedRecieved = packetDTO.stamp();
 
-                /*TODO: How to measure Rtt here for dynamic timeout limit?*/
-                if (isTimedOut()) {
-                    if (!hasSkippedPackets()) {
-                        gotLastPacket = true;
-                        log.debug("ENDING READING, NO MORE INCOMMING DATA");
-                    } else {
-                        log.debug("now: " + nowtimeStamp + " last: " + lastPackedRecieved + " = " + (nowtimeStamp - lastPackedRecieved));
-                        log.debug("now: " + nowtimeStamp + " start: " + startReadingTimeStamp + " = " + (nowtimeStamp - startReadingTimeStamp));
-                        throw new IOException();
-                    }
-                }
+                        if (isLastPacket(packetDTO)) {
+                            gotLastPacket = true;
+                            lastPacketTimestamp = timeStamper.timeStamp();
+                            LOG.info("Received the last packet.");
+                        }
 
-            } catch (IOException ioe) {
-                exp = ioe;
-                exp.printStackTrace();
-                exceptionOccured = true;
-            } catch (InterruptedException iexp) {
-                iexp.printStackTrace();
-                exceptionOccured = true;
-            } catch (ArrayIndexOutOfBoundsException aexp) {
-                aexp.printStackTrace();
-                exceptionOccured = true;
-                exp = new IOException();
+                        if (isPacketExpected(packetDTO.utpPacket())) {
+                            handleExpectedPacket(packetDTO);
+                        } else {
+                            handleUnexpectedPacket(packetDTO);
+                        }
+                        if (ackThisPacket()) {
+                            currentPackedAck = 0;
+                        }
+                    }
+
+                    /*TODO: How to measure Rtt here for dynamic timeout limit?*/
+                    if (isTimedOut()) {
+                        if (!hasSkippedPackets()) {
+                            gotLastPacket = true;
+                            LOG.info("Ending reading, no more incoming data");
+                        } else {
+                            //LOG.debug("now: " + nowtimeStamp + " last: " + lastPackedRecieved + " = " + (nowtimeStamp - lastPackedRecieved));
+                            //LOG.debug("now: " + nowtimeStamp + " start: " + startReadingTimeStamp + " = " + (nowtimeStamp - startReadingTimeStamp));
+                            throw new IOException("Timeout occurred with skipped packets.");
+                        }
+                    }
+                    successful = true;
+                }
+            } catch (IOException | InterruptedException | ArrayIndexOutOfBoundsException e) {
+                LOG.debug("Something went wrong during packet processing!");
+            } finally {
+                channel.returnFromReading();
+                if (successful) {
+                    readFuture.complete(null);
+                } else {
+                    readFuture.completeExceptionally(new RuntimeException("Something went wrong!"));
+                }
+                LOG.info("Buffer position: {}, Buffer limit: {}", buffer.position(), buffer.limit());
+                LOG.info("Total payload length: {}", totalPayloadLength);
+                LOG.debug("Reader stopped.");
             }
-        }
-        isRunning = false;
-        readFuture.complete(null);
-
-
-        log.debug("Buffer position: " + buffer.position() + " buffer limit: " + buffer.limit());
-        log.debug("PAYLOAD LENGHT " + totalPayloadLength);
-        log.debug("READER OUT");
-
-        channel.returnFromReading();
-
+        });
+        return this.readFuture;
     }
+
 
     private boolean isTimedOut() {
         //TODO: extract constants...
@@ -218,11 +180,6 @@ public class UtpReadingRunnable extends Thread implements Runnable {
         return currentPackedAck >= UtpAlgConfiguration.SKIP_PACKETS_UNTIL_ACK;
     }
 
-    /**
-     * Returns the average space available in the buffer in Bytes.
-     *
-     * @return bytes
-     */
     public long getLeftSpaceInBuffer() throws IOException {
         return (long) (skippedBuffer.getFreeSize()) * lastPayloadLength;
     }
@@ -261,11 +218,6 @@ public class UtpReadingRunnable extends Thread implements Runnable {
         }
     }
 
-    /**
-     * True if this packet is expected.
-     *
-     * @param utpPacket packet
-     */
     public boolean isPacketExpected(UtpPacket utpPacket) {
         int seqNumberFromPacket = utpPacket.getSequenceNumber() & 0xFFFF;
 //		log.debug("Expected Sequence Number == " + getExpectedSeqNr());
@@ -280,37 +232,14 @@ public class UtpReadingRunnable extends Thread implements Runnable {
         return ackNumber + 1;
     }
 
-
-
     public void graceFullInterrupt() {
         this.graceFullInterrupt = true;
     }
 
 
-
-
-
-    public boolean isRunning() {
-        return isRunning;
-    }
-
-    public MicroSecondsTimeStamp getTimestamp() {
-        return timeStamper;
-    }
-
-    public void setTimestamp(MicroSecondsTimeStamp timestamp) {
-        this.timeStamper = timestamp;
-    }
-
-
-
-
-
-
     //done
     private boolean continueReading() {
-        return !graceFullInterrupt && !exceptionOccured
-                && (!gotLastPacket || hasSkippedPackets() || !timeAwaitedAfterLastPacket());
+        return !graceFullInterrupt && (!gotLastPacket || hasSkippedPackets() || !timeAwaitedAfterLastPacket());
     }
 
     private boolean hasSkippedPackets() {
@@ -322,4 +251,7 @@ public class UtpReadingRunnable extends Thread implements Runnable {
                 && gotLastPacket;
     }
 
+    public boolean isAlive() {
+        return this.readFuture.isDone();
+    }
 }

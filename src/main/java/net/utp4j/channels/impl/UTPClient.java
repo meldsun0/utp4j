@@ -17,7 +17,7 @@ package net.utp4j.channels.impl;
 import net.utp4j.channels.UtpSocketState;
 import net.utp4j.channels.impl.alg.UtpAlgConfiguration;
 import net.utp4j.channels.impl.conn.ConnectionTimeOutRunnable;
-import net.utp4j.channels.impl.operations.UtpReadingRunnable;
+import net.utp4j.channels.impl.operations.UTPReadingFuture;
 import net.utp4j.channels.impl.operations.UtpPacketRecievable;
 import net.utp4j.channels.impl.operations.UTPWritingFuture;
 import net.utp4j.data.*;
@@ -61,7 +61,7 @@ public class UTPClient implements UtpPacketRecievable {
     private final BlockingQueue<UtpTimestampedPacketDTO> queue = new LinkedBlockingQueue<UtpTimestampedPacketDTO>();
 
     private UTPWritingFuture writer;
-    private UtpReadingRunnable reader;
+    private UTPReadingFuture reader;
     private final Object sendLock = new Object();
 
 
@@ -201,7 +201,7 @@ public class UTPClient implements UtpPacketRecievable {
 
             UtpPacket finPacket = extractUtpPacket(udpPacket);
             long freeBuffer = 0;
-            if (reader != null && reader.isRunning()) {
+            if (reader != null && reader.isAlive()) {
                 freeBuffer = reader.getLeftSpaceInBuffer();
             } else {
                 freeBuffer = UtpAlgConfiguration.MAX_PACKET_SIZE;
@@ -369,10 +369,8 @@ public class UTPClient implements UtpPacketRecievable {
     }
 
     public CompletableFuture<Void> read(ByteBuffer dst) {
-        CompletableFuture<Void> readFuture = new CompletableFuture<Void>();
-        reader = new UtpReadingRunnable(this, dst, timeStamper, readFuture);
-        reader.start();
-        return readFuture;
+        this.reader = new UTPReadingFuture(this, dst, timeStamper);
+        return reader.startReading();
     }
 
     public BlockingQueue<UtpTimestampedPacketDTO> getDataGramQueue() {
@@ -398,7 +396,6 @@ public class UTPClient implements UtpPacketRecievable {
         fin.setTypeVersion(FIN);
         return fin;
     }
-
 
 
     /**
@@ -447,7 +444,7 @@ public class UTPClient implements UtpPacketRecievable {
     }
 
     public boolean isReading() {
-        return (reader != null && reader.isRunning());
+        return (reader != null && reader.isAlive());
     }
 
     public boolean isWriting() {

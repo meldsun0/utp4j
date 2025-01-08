@@ -29,7 +29,6 @@ public class UTPWritingFuture {
     private final UtpAlgorithm algorithm;
     private final MicroSecondsTimeStamp timeStamper;
     private CompletableFuture<Void> writerFuture;
-    private CompletableFuture<Void> asyncWriterFuture ;
 
     public UTPWritingFuture(UTPClient channel, ByteBuffer buffer,
                             MicroSecondsTimeStamp timeStamper) {
@@ -42,7 +41,7 @@ public class UTPWritingFuture {
 
 
     public CompletableFuture<Void> startWriting() {
-      this.asyncWriterFuture = CompletableFuture.runAsync(() -> {
+      CompletableFuture.runAsync(() -> {
             boolean successfull = false;
             try {
                 initializeAlgorithm();
