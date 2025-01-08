@@ -476,11 +476,12 @@ public class UTPClient  {
      * Start a connection time out counter which will frequently resend the syn packet.
      */
     protected void startConnectionTimeOutCounter(UtpPacket synPacket) {
-        retryConnectionTimeScheduler = Executors.newSingleThreadScheduledExecutor();
-        ConnectionTimeOutRunnable runnable = new ConnectionTimeOutRunnable(synPacket, this, stateLock);
         LOG.debug("starting scheduler");
-        // retryConnectionTimeScheduler.schedule(runnable, 2, TimeUnit.SECONDS);
-        retryConnectionTimeScheduler.scheduleWithFixedDelay(runnable, UtpAlgConfiguration.CONNECTION_ATTEMPT_INTERVALL_MILLIS,
+        retryConnectionTimeScheduler = Executors.newSingleThreadScheduledExecutor();
+        retryConnectionTimeScheduler.scheduleWithFixedDelay(()->{
+                    this.resendSynPacket(synPacket);
+                },
+                UtpAlgConfiguration.CONNECTION_ATTEMPT_INTERVALL_MILLIS,
                 UtpAlgConfiguration.CONNECTION_ATTEMPT_INTERVALL_MILLIS,
                 TimeUnit.MILLISECONDS);
     }

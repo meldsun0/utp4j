@@ -89,17 +89,4 @@ public class MicroSecondsTimeStamp {
         return (initDateMillis * 1000 + deltaMs);
     }
 
-
-    public long getBegin() {
-        return (initDateMillis * 1000);
-    }
-
-    public long getStartNs() {
-        return startNs;
-    }
-
-    public long getInitDateMs() {
-        return initDateMillis;
-    }
-
 }

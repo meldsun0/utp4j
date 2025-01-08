@@ -19,11 +19,7 @@ import net.utp4j.data.UtpPacket;
 import java.net.DatagramPacket;
 
 
-/**
- * Simple DTO class that stores some meta data about a {@see UtpPacket}
- *
- * @author Ivan Iljkic (i.iljkic@gmail.com)
- */
+
 public class UtpTimestampedPacketDTO {
 
     private DatagramPacket packet;
