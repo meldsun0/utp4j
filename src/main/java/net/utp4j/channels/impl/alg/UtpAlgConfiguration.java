@@ -1,32 +1,12 @@
-/* Copyright 2013 Ivan Iljkic
- *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not
- * use this file except in compliance with the License. You may obtain a copy of
- * the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations under
- * the License.
- */
 package net.utp4j.channels.impl.alg;
 
 public class UtpAlgConfiguration {
 
     public static final int MAX_CONNECTION_ATTEMPTS = 5;
     public static final int CONNECTION_ATTEMPT_INTERVALL_MILLIS = 5000;
-
     public static long MINIMUM_DELTA_TO_MAX_WINDOW_MICROS = 1000000;
     // ack every second packets
     public static int SKIP_PACKETS_UNTIL_ACK = 2;
-
-
-    /*
-      TWEAKING SECTION
-     */
 
     /**
      * Auto ack every packet that is smaller than ACK_NR from ack packet.
@@ -37,15 +17,7 @@ public class UtpAlgConfiguration {
      * if oldest mindelay sample is older than that, update it.
      */
     public static long MINIMUM_DIFFERENCE_TIMESTAMP_MICROSEC = 120000000L;
-
-    /**
-     * timeout
-     */
     public static int MINIMUM_TIMEOUT_MILLIS = 500;
-
-    /**
-     * Packet size modus
-     */
     public static PacketSizeModus PACKET_SIZE_MODE = PacketSizeModus.CONSTANT_1472;
 
     /**
@@ -54,15 +26,7 @@ public class UtpAlgConfiguration {
      */
 
     public static volatile int MAX_PACKET_SIZE = 1472;
-
-    /**
-     * minimum packet size.
-     */
     public static volatile int MIN_PACKET_SIZE = 150;
-
-    /**
-     * Minimum path MTU
-     */
     public static volatile int MINIMUM_MTU = 576;
 
     /**
@@ -90,37 +54,23 @@ public class UtpAlgConfiguration {
      * Minimum number of acks past seqNr=x to trigger a resend of seqNr=x;
      */
     public static volatile int MIN_SKIP_PACKET_BEFORE_RESEND = 3;
-
     public static volatile long MICROSECOND_WAIT_BETWEEN_BURSTS = 28000;
-
     public static volatile long TIME_WAIT_AFTER_LAST_PACKET = 3000000;
-
     public static volatile boolean ONLY_POSITIVE_GAIN = false;
-
     public static volatile boolean DEBUG = false;
 
 
-    /**
-     * @return information about the algorithm. This is only used for debugging
-     */
     public static String getString() {
-        String toReturn = "";
-        toReturn += "MINIMUM_TIMEOUT_MILLIS: " + MINIMUM_TIMEOUT_MILLIS + " ";
-        toReturn += "PACKET_SIZE_MODE: " + PACKET_SIZE_MODE + " ";
-        toReturn += "MAX_PACKET_SIZE: " + MAX_PACKET_SIZE + " ";
-        toReturn += "MIN_PACKET_SIZE: " + MIN_PACKET_SIZE + " ";
-        toReturn += "MINIMUM_MTU: " + MINIMUM_MTU + " ";
-        toReturn += "MAX_CWND_INCREASE_PACKETS_PER_RTT: " + MAX_CWND_INCREASE_PACKETS_PER_RTT + " ";
-        toReturn += "C_CONTROL_TARGET_MICROS: " + C_CONTROL_TARGET_MICROS + " ";
-        toReturn += "SEND_IN_BURST: " + SEND_IN_BURST + " ";
-        toReturn += "MAX_BURST_SEND: " + MAX_BURST_SEND + " ";
-        toReturn += "MIN_SKIP_PACKET_BEFORE_RESEND: " + MIN_SKIP_PACKET_BEFORE_RESEND + " ";
-        toReturn += "MICROSECOND_WAIT_BETWEEN_BURSTS: " + MICROSECOND_WAIT_BETWEEN_BURSTS + " ";
-        toReturn += "TIME_WAIT_AFTER_FIN_MICROS: " + TIME_WAIT_AFTER_LAST_PACKET + " ";
-        toReturn += "ONLY_POSITIVE_GAIN: " + ONLY_POSITIVE_GAIN + " ";
-        toReturn += "DEBUG: " + DEBUG + " ";
-        return toReturn;
+        return String.format(
+                "MINIMUM_TIMEOUT_MILLIS: %d, PACKET_SIZE_MODE: %s, MAX_PACKET_SIZE: %d, MIN_PACKET_SIZE: %d, " +
+                        "MINIMUM_MTU: %d, MAX_CWND_INCREASE_PACKETS_PER_RTT: %d, C_CONTROL_TARGET_MICROS: %d, " +
+                        "SEND_IN_BURST: %b, MAX_BURST_SEND: %d, MIN_SKIP_PACKET_BEFORE_RESEND: %d, " +
+                        "MICROSECOND_WAIT_BETWEEN_BURSTS: %d, TIME_WAIT_AFTER_LAST_PACKET: %d, ONLY_POSITIVE_GAIN: %b, DEBUG: %b",
+                MINIMUM_TIMEOUT_MILLIS, PACKET_SIZE_MODE, MAX_PACKET_SIZE, MIN_PACKET_SIZE,
+                MINIMUM_MTU, MAX_CWND_INCREASE_PACKETS_PER_RTT, C_CONTROL_TARGET_MICROS,
+                SEND_IN_BURST, MAX_BURST_SEND, MIN_SKIP_PACKET_BEFORE_RESEND,
+                MICROSECOND_WAIT_BETWEEN_BURSTS, TIME_WAIT_AFTER_LAST_PACKET,
+                ONLY_POSITIVE_GAIN, DEBUG
+        );
     }
-
-
 }

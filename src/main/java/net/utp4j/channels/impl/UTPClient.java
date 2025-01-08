@@ -2,7 +2,6 @@ package net.utp4j.channels.impl;
 
 import net.utp4j.channels.UtpSocketState;
 import net.utp4j.channels.impl.alg.UtpAlgConfiguration;
-import net.utp4j.channels.impl.conn.ConnectionTimeOutRunnable;
 import net.utp4j.channels.impl.operations.UTPReadingFuture;
 import net.utp4j.channels.impl.operations.UTPWritingFuture;
 import net.utp4j.data.*;
