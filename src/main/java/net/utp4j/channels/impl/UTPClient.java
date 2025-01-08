@@ -441,6 +441,7 @@ public class UTPClient implements UtpPacketRecievable {
         if (isReading()) {
             reader.graceFullInterrupt();
         }
+
         if (isWriting()) {
             writer.graceFullInterrupt();
         }
@@ -451,7 +452,7 @@ public class UTPClient implements UtpPacketRecievable {
     }
 
     public boolean isWriting() {
-        return (writer != null && writer.isRunning());
+        return (writer != null && writer.isAlive());
     }
 
     public void ackAlreadyAcked(SelectiveAckHeaderExtension extension, int timestampDifference,

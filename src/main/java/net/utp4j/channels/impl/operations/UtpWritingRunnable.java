@@ -20,23 +20,17 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
-/**
- * Handles the writing job of a channel...
- *
- * @author Ivan Iljkic (i.iljkic@gmail.com)
- */
 public class UtpWritingRunnable extends Thread implements Runnable {
+
+    private static final Logger LOG = LogManager.getLogger(UtpWritingRunnable.class);
 
     private final ByteBuffer buffer;
     private volatile boolean graceFullInterrupt;
     private final UTPClient channel;
-    private boolean isRunning = false;
     private final UtpAlgorithm algorithm;
-    private IOException possibleException = null;
     private final MicroSecondsTimeStamp timeStamper;
 
     private CompletableFuture<Void> writerFuture;
-    private static final Logger LOG = LogManager.getLogger(UtpWritingRunnable.class);
 
     public UtpWritingRunnable(UTPClient channel, ByteBuffer buffer,
                               MicroSecondsTimeStamp timeStamper, CompletableFuture<Void> writerFuture) {
@@ -47,11 +41,6 @@ public class UtpWritingRunnable extends Thread implements Runnable {
         algorithm = new UtpAlgorithm(timeStamper, channel.getRemoteAdress());
     }
 
-    private void initializeAlgorithm() {
-        algorithm.initiateAckPosition(channel.getCurrentSequenceNumber());
-        algorithm.setTimeStamper(timeStamper);
-        algorithm.setByteBuffer(buffer);
-    }
 
     @Override
     public void run() {
@@ -59,7 +48,6 @@ public class UtpWritingRunnable extends Thread implements Runnable {
         try {
             initializeAlgorithm();
             buffer.flip();
-            isRunning = true;
             while (continueSending()) {
                 if (!processAcknowledgements()) {
                     LOG.debug("Graceful interrupt due to lack of acknowledgements.");
@@ -81,9 +69,13 @@ public class UtpWritingRunnable extends Thread implements Runnable {
         }
     }
 
+    private void initializeAlgorithm() {
+        algorithm.initiateAckPosition(channel.getCurrentSequenceNumber());
+        algorithm.setTimeStamper(timeStamper);
+        algorithm.setByteBuffer(buffer);
+    }
 
     private void finalizeTransmission(boolean successful) {
-        isRunning = false;
         algorithm.end(buffer.position(), successful);
         LOG.debug("Transmission complete.");
         channel.removeWriter();
@@ -125,41 +117,32 @@ public class UtpWritingRunnable extends Thread implements Runnable {
         }
     }
 
-
     private DatagramPacket getNextPacket() throws IOException {
-        int packetSize = algorithm.sizeOfNextPacket();
-        int remainingBytes = buffer.remaining();
-
-        if (remainingBytes < packetSize) {
-            packetSize = remainingBytes;
-        }
-
+        int packetSize = Math.min(algorithm.sizeOfNextPacket(), buffer.remaining());
 
         byte[] payload = new byte[packetSize];
         buffer.get(payload);
+
         UtpPacket utpPacket = channel.getNextDataPacket();
         utpPacket.setPayload(payload);
-
-        int leftInBuffer = buffer.remaining();
-        if (leftInBuffer > UnsignedTypesUtil.MAX_UINT) {
-            leftInBuffer = (int) (UnsignedTypesUtil.MAX_UINT & 0xFFFFFFFF);
-        }
+        // Calculate remaining buffer size, capped at MAX_UINT
+        int leftInBuffer = (int) Math.min(buffer.remaining(), UnsignedTypesUtil.MAX_UINT & 0xFFFFFFFF);
         utpPacket.setWindowSize(leftInBuffer);
-//		log.debug("Sending Pkt: " + utpPacket.toString());
+        // Convert UTP packet to bytes and prepare DatagramPacket
         byte[] utpPacketBytes = utpPacket.toByteArray();
-        DatagramPacket udpPacket = new DatagramPacket(utpPacketBytes, utpPacketBytes.length, channel.getRemoteAdress());
+        DatagramPacket udpPacket = new DatagramPacket(
+                utpPacketBytes,
+                utpPacketBytes.length,
+                channel.getRemoteAdress()
+        );
+
+        // Mark the packet as on the fly
         algorithm.markPacketOnfly(utpPacket, udpPacket);
+
         return udpPacket;
     }
 
 
-    public boolean hasExceptionOccured() {
-        return possibleException != null;
-    }
-
-    public IOException getException() {
-        return possibleException;
-    }
 
     private boolean continueSending() {
         return !graceFullInterrupt && !allPacketsAckedSendAndAcked();
@@ -171,18 +154,10 @@ public class UtpWritingRunnable extends Thread implements Runnable {
         return algorithm.areAllPacketsAcked() && !buffer.hasRemaining();
     }
 
-
     public void graceFullInterrupt() {
         graceFullInterrupt = true;
     }
 
-    public int getBytesSend() {
-        return buffer.position();
-    }
-
-    public boolean isRunning() {
-        return isRunning;
-    }
 }
 
 /*
