@@ -1,6 +1,8 @@
 package net.utp4j.channels.impl;
 
 import net.utp4j.channels.UtpSocketState;
+import net.utp4j.channels.impl.message.MessageType;
+import net.utp4j.channels.impl.message.UTPWireMessageDecoder;
 import net.utp4j.data.UtpPacket;
 import net.utp4j.data.UtpPacketUtils;
 import org.apache.logging.log4j.LogManager;
@@ -103,7 +105,7 @@ public class UTPServer {
     }
 
     public void recievePacket(DatagramPacket packet) {
-        if (UtpPacketUtils.isSynPkt(packet)) {
+        if (UTPWireMessageDecoder.decode(packet)== MessageType.ST_SYN) {
             synRecieved(packet);
         } else {
             UtpPacket utpPacket = UtpPacketUtils.extractUtpPacket(packet);

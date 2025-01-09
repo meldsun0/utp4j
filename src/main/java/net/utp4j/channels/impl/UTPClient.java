@@ -1,16 +1,15 @@
 package net.utp4j.channels.impl;
 
-import jdk.jshell.execution.Util;
 import net.utp4j.channels.UtpSocketState;
 import net.utp4j.channels.impl.alg.UtpAlgConfiguration;
+import net.utp4j.channels.impl.message.MessageType;
+import net.utp4j.channels.impl.message.UTPWireMessageDecoder;
 import net.utp4j.channels.impl.operations.UTPReadingFuture;
 import net.utp4j.channels.impl.operations.UTPWritingFuture;
 import net.utp4j.data.*;
-import net.utp4j.data.type.Bytes16;
 import net.utp4j.data.util.Utils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.apache.tuweni.bytes.Bytes;
 
 import java.io.IOException;
 import java.net.*;
@@ -27,15 +26,16 @@ import static net.utp4j.data.UtpPacketUtils.*;
 import static net.utp4j.data.bytes.UnsignedTypesUtil.*;
 
 
-
 public class UTPClient {
 
     //State
-    private long connectionIdSendingOutgoing;
-    private long connectionIdRecievingIncoming;
+    private long UTPConnectionIdSending;
+    private long UTPConnectionIdReceiving;
+    private SocketAddress transportAddress;
+
+
     private int currentAckNumber;
     private int currentSequenceNumber;
-    private SocketAddress remoteAddressWhichThisSocketIsConnectedTo;
     private volatile UtpSocketState state = null;
     private static int DEF_SEQ_START = 1;
     private int connectionAttempts = 0;
@@ -86,9 +86,9 @@ public class UTPClient {
 
                 startReading();
 
-                this.remoteAddressWhichThisSocketIsConnectedTo = address;
-                this.connectionIdRecievingIncoming = connectionId;
-                this.connectionIdSendingOutgoing = connectionId + 1;
+                this.transportAddress = address;
+                this.UTPConnectionIdReceiving = connectionId;
+                this.UTPConnectionIdSending = connectionId + 1;
 
                 this.currentSequenceNumber = DEF_SEQ_START;
 
@@ -100,13 +100,12 @@ public class UTPClient {
                         .timestamp(timeStamper.utpTimeStamp())
                         .build();
 
-                sendPacket(UtpPacket.createDatagramPacket(synPacket, this.remoteAddressWhichThisSocketIsConnectedTo));
+                sendPacket(UtpPacket.createDatagramPacket(synPacket, this.transportAddress));
                 this.state = SYN_SENT;
-
-                printState("[Syn send] ");
                 this.currentSequenceNumber = Utils.incrementSeqNumber(this.currentSequenceNumber);
 
                 startConnectionTimeOutCounter(synPacket);
+                printState("[Syn send] ");
             } catch (IOException exp) {
                 //TODO reconnect
             }
@@ -135,11 +134,10 @@ public class UTPClient {
 
     /* debug method to print id's, seq# and ack# */
     protected void printState(String msg) {
-        String state = "[ConnID Sending: " + connectionIdSendingOutgoing + "] "
-                + "[ConnID Recv: " + connectionIdRecievingIncoming + "] [SeqNr. "
+        String state = "[ConnID Sending: " + UTPConnectionIdSending + "] "
+                + "[ConnID Recv: " + UTPConnectionIdReceiving + "] [SeqNr. "
                 + currentSequenceNumber + "] [AckNr: " + currentAckNumber + "]";
         LOG.debug(msg + state);
-
     }
 
 
@@ -149,22 +147,17 @@ public class UTPClient {
 
 
     public void recievePacket(DatagramPacket udpPacket) {
-        if (isSynAckPacket(udpPacket)) {
+        MessageType messageType = UTPWireMessageDecoder.decode(udpPacket);
+        if(messageType == MessageType.ST_STATE  && this.state == UtpSocketState.SYN_SENT){
             handleSynAckPacket(udpPacket);
-        } else if (isResetPacket(udpPacket)) {
-            handleResetPacket(udpPacket);
-        } else if (isSynPkt(udpPacket)) {
-            handleIncommingConnectionRequest(udpPacket);
-        } else if (isDataPacket(udpPacket)) {
-            handlePacket(udpPacket);
-        } else if (isStatePacket(udpPacket)) {
-            handlePacket(udpPacket);
-        } else if (isFinPacket(udpPacket)) {
-            handleFinPacket(udpPacket);
-        } else {
-            sendResetPacket(udpPacket.getSocketAddress());
         }
-
+        switch (messageType) {
+            case ST_RESET -> handleResetPacket(udpPacket);
+            case ST_SYN -> handleIncommingConnectionRequest(udpPacket);
+            case ST_DATA, ST_STATE ->  handlePacket(udpPacket);
+            case ST_FIN ->  handleFinPacket(udpPacket);
+            default -> sendResetPacket(udpPacket.getSocketAddress());
+        }
     }
 
     private void handleFinPacket(DatagramPacket udpPacket) {
@@ -192,9 +185,6 @@ public class UTPClient {
         this.close();
     }
 
-    private boolean isSynAckPacket(DatagramPacket udpPacket) {
-        return isStatePacket(udpPacket) && getState() == UtpSocketState.SYN_SENT;
-    }
 
     private void handleSynAckPacket(DatagramPacket udpPacket) {
         UtpPacket pkt = extractUtpPacket(udpPacket);
@@ -242,7 +232,7 @@ public class UTPClient {
 
     public void ackPacket(UtpPacket utpPacket, int timestampDifference, long windowSize) throws IOException {
         UtpPacket ackPacket = createAckPacket(utpPacket, timestampDifference, windowSize);
-        sendPacket(UtpPacket.createDatagramPacket(ackPacket, this.remoteAddressWhichThisSocketIsConnectedTo));
+        sendPacket(UtpPacket.createDatagramPacket(ackPacket, this.transportAddress));
     }
 
 
@@ -251,7 +241,7 @@ public class UTPClient {
 
         if (acceptSyn(udpPacket)) {
             int timeStamp = timeStamper.utpTimeStamp();
-            this.remoteAddressWhichThisSocketIsConnectedTo = udpPacket.getSocketAddress();
+            this.transportAddress = udpPacket.getSocketAddress();
             setConnectionIdsFromPacket(utpPacket);
             this.currentSequenceNumber = Utils.randomSeqNumber();
             setAckNrFromPacketSqNr(utpPacket);
@@ -263,13 +253,13 @@ public class UTPClient {
                     UtpAlgConfiguration.MAX_PACKET_SIZE * 1000L);
             try {
                 LOG.debug("sending syn ack");
-                sendPacket(UtpPacket.createDatagramPacket(ackPacket, this.remoteAddressWhichThisSocketIsConnectedTo));
+                sendPacket(UtpPacket.createDatagramPacket(ackPacket, this.transportAddress));
                 setState(CONNECTED);
             } catch (IOException exp) {
                 // TODO: In future?
-                this.remoteAddressWhichThisSocketIsConnectedTo = null;
-                this.connectionIdSendingOutgoing = (short) 0;
-                this.connectionIdRecievingIncoming = (short) 0;
+                this.transportAddress = null;
+                this.UTPConnectionIdSending = (short) 0;
+                this.UTPConnectionIdReceiving = (short) 0;
                 setCurrentAckNumber(0);
                 setState(SYN_ACKING_FAILED);
                 exp.printStackTrace();
@@ -300,8 +290,8 @@ public class UTPClient {
         short connId = utpPacket.getConnectionId();
         int connIdSender = (connId & 0xFFFF);
         int connIdRec = (connId & 0xFFFF) + 1;
-        this.connectionIdSendingOutgoing = connIdSender;
-        this.connectionIdRecievingIncoming = connIdRec;
+        this.UTPConnectionIdSending = connIdSender;
+        this.UTPConnectionIdReceiving = connIdRec;
 
 
     }
@@ -361,10 +351,10 @@ public class UTPClient {
         ackPacket.setExtensions(extensions);
         ackPacket.setTimestampDifference(timestampDifference);
         ackPacket.setTimestamp(timeStamper.utpTimeStamp());
-        ackPacket.setConnectionId(longToUshort(this.connectionIdSendingOutgoing));
+        ackPacket.setConnectionId(longToUshort(this.UTPConnectionIdSending));
         ackPacket.setTypeVersion(STATE);
         ackPacket.setWindowSize(longToUint(windowSize));
-        sendPacket(UtpPacket.createDatagramPacket(ackPacket, this.remoteAddressWhichThisSocketIsConnectedTo));
+        sendPacket(UtpPacket.createDatagramPacket(ackPacket, this.transportAddress));
 
     }
 
@@ -380,7 +370,7 @@ public class UTPClient {
         UtpPacket utpPacket = UtpPacket
                 .createPacket(this.currentSequenceNumber,
                         this.currentAckNumber,
-                        this.connectionIdSendingOutgoing,
+                        this.UTPConnectionIdSending,
                         timeStamper.utpTimeStamp(),
                         UtpPacketUtils.DATA);
         this.currentSequenceNumber = Utils.incrementSeqNumber(this.currentSequenceNumber);
@@ -392,7 +382,7 @@ public class UTPClient {
         UtpPacket finPacket = UtpPacket
                 .createPacket(this.currentSequenceNumber,
                         this.currentAckNumber,
-                        this.connectionIdSendingOutgoing,
+                        this.UTPConnectionIdSending,
                         timeStamper.utpTimeStamp(),
                         UtpPacketUtils.FIN);
         this.currentSequenceNumber = Utils.incrementSeqNumber(this.currentSequenceNumber);
@@ -404,11 +394,11 @@ public class UTPClient {
                                    int timestampDifference, long advertisedWindow) throws IOException {
         UtpPacket packet = UtpPacket.createSelectivePacket(
                 this.currentAckNumber,
-                this.connectionIdSendingOutgoing,
+                this.UTPConnectionIdSending,
                 timeStamper.utpTimeStamp(),
                 STATE, timestampDifference, advertisedWindow,
                 headerExtension);
-        sendPacket(UtpPacket.createDatagramPacket(packet, this.remoteAddressWhichThisSocketIsConnectedTo));
+        sendPacket(UtpPacket.createDatagramPacket(packet, this.transportAddress));
     }
 
     /***/
@@ -451,7 +441,7 @@ public class UTPClient {
     public void connectionFailed(IOException exp) {
         LOG.debug("got failing message");
         this.currentSequenceNumber = DEF_SEQ_START;
-        this.remoteAddressWhichThisSocketIsConnectedTo = null;
+        this.transportAddress = null;
         abortImpl();
         setState(CLOSED);
         retryConnectionTimeScheduler.shutdown();
@@ -475,7 +465,7 @@ public class UTPClient {
                     if (attempts < UtpAlgConfiguration.MAX_CONNECTION_ATTEMPTS) {
                         incrementConnectionAttempts();
                         LOG.debug("REATTEMPTING CONNECTION");
-                        sendPacket(UtpPacket.createDatagramPacket(synPacket, this.remoteAddressWhichThisSocketIsConnectedTo));
+                        sendPacket(UtpPacket.createDatagramPacket(synPacket, this.transportAddress));
                     } else {
                         connectionFailed(new SocketTimeoutException());
                     }
@@ -494,6 +484,8 @@ public class UTPClient {
     protected UtpPacket createAckPacket(UtpPacket pkt, int timedifference,
                                         long advertisedWindow) {
         UtpPacket ackPacket = new UtpPacket();
+
+
         if (pkt.getTypeVersion() != FIN) {
             setAckNrFromPacketSqNr(pkt);
         }
@@ -501,7 +493,7 @@ public class UTPClient {
 
         ackPacket.setTimestampDifference(timedifference);
         ackPacket.setTimestamp(timeStamper.utpTimeStamp());
-        ackPacket.setConnectionId(longToUshort(this.connectionIdSendingOutgoing));
+        ackPacket.setConnectionId(longToUshort(this.UTPConnectionIdSending));
         ackPacket.setTypeVersion(STATE);
         ackPacket.setWindowSize(longToUint(advertisedWindow));
         return ackPacket;
@@ -509,7 +501,7 @@ public class UTPClient {
 
 
     public long getConnectionIdRecievingIncoming() {
-        return connectionIdRecievingIncoming;
+        return UTPConnectionIdReceiving;
     }
 
     public UtpSocketState getState() {
@@ -517,7 +509,7 @@ public class UTPClient {
     }
 
     public SocketAddress getRemoteAdress() {
-        return remoteAddressWhichThisSocketIsConnectedTo;
+        return transportAddress;
     }
 
     public int getCurrentAckNumber() {
@@ -537,8 +529,8 @@ public class UTPClient {
         this.currentAckNumber = currentAckNumber;
     }
 
-    public void setRemoteAddressWhichThisSocketIsConnectedTo(InetSocketAddress localhost) {
-        this.remoteAddressWhichThisSocketIsConnectedTo = localhost;
+    public void setTransportAddress(InetSocketAddress localhost) {
+        this.transportAddress = localhost;
     }
 
     public void removeWriter() {

@@ -62,7 +62,7 @@ public class UtpChannelReadingTest {
 
         channel.setTimetamper(stamp);
         channel.setUnderlyingUDPSocket(socket);
-        channel.setRemoteAddressWhichThisSocketIsConnectedTo(new InetSocketAddress("localhost", 12345));
+        channel.setTransportAddress(new InetSocketAddress("localhost", 12345));
 
         // last recieved packet has seqNr. 2, next one will be packet with seqNr. 3
         channel.setCurrentAckNumber(2);

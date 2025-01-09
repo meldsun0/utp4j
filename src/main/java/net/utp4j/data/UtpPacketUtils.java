@@ -91,7 +91,7 @@ public class UtpPacketUtils {
     }
 
 
-    private static boolean isPacketType(DatagramPacket packet, byte flag) {
+    public static boolean isPacketType(DatagramPacket packet, byte flag) {
         if (packet == null) {
             return false;
         }
@@ -103,26 +103,6 @@ public class UtpPacketUtils {
         }
 
         return false;
-    }
-
-    public static boolean isSynPkt(DatagramPacket packet) {
-        return isPacketType(packet, SYN);
-    }
-
-    public static boolean isResetPacket(DatagramPacket udpPacket) {
-        return isPacketType(udpPacket, RESET);
-    }
-
-    public static boolean isDataPacket(DatagramPacket udpPacket) {
-        return isPacketType(udpPacket, DATA);
-    }
-
-    public static boolean isStatePacket(DatagramPacket udpPacket) {
-        return isPacketType(udpPacket, STATE);
-    }
-
-    public static boolean isFinPacket(DatagramPacket udpPacket) {
-        return isPacketType(udpPacket, FIN);
     }
 
 }
