@@ -190,9 +190,8 @@ public class UTPClient {
         }
     }
 
-    private boolean isSameAddressAndId(long id, SocketAddress addr) {
-        return (id & 0xFFFFFFFF) == getConnectionIdRecievingIncoming()
-                && addr.equals(getRemoteAdress());
+    private boolean isSameAddressAndId(long connectionId, SocketAddress addr) {
+        return (connectionId & 0xFFFFFFFF) == getConnectionIdRecievingIncoming() && addr.equals(getRemoteAdress());
     }
 
     private void disableConnectionTimeOutCounter() {
@@ -234,7 +233,8 @@ public class UTPClient {
         //This packet is from a client, but here I am a server
         UtpPacket utpPacket = UtpPacket.decode(udpPacket);
 
-        if (acceptSyn(udpPacket)) {
+        if (this.state == CLOSED ||
+                (this.state == CONNECTED && isSameAddressAndId(utpPacket.getConnectionId(), udpPacket.getSocketAddress()))) {
             try {
                 //STATE
                 int timeStamp = timeStamper.utpTimeStamp();
@@ -245,7 +245,6 @@ public class UTPClient {
                 this.UTPConnectionIdSending = connIdSender;
                 this.UTPConnectionIdReceiving = connIdRec;
                 this.currentSequenceNumber = Utils.randomSeqNumber();
-
                 short ackNumberS = utpPacket.getSequenceNumber();
                 this.currentAckNumber = ackNumberS & 0xFFFF;
 
@@ -280,8 +279,7 @@ public class UTPClient {
 
     private boolean acceptSyn(DatagramPacket udpPacket) {
         UtpPacket pkt = UtpPacket.decode(udpPacket);
-        return getState() == CLOSED
-                || (getState() == CONNECTED && isSameAddressAndId(
+        return this.state == CLOSED || (this.state == CONNECTED && isSameAddressAndId(
                 pkt.getConnectionId(), udpPacket.getSocketAddress()));
     }
 
