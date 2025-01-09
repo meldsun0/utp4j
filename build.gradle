@@ -30,6 +30,8 @@ dependencies {
     testImplementation libs.org.mockito.mockito.junit.jupiter
     testImplementation libs.org.junit.jupiter.junit.jupiter.api
 
+    implementation libs.tuweni.bytes
+
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.7.0'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.7.0'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.7.0'

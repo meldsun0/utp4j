@@ -21,8 +21,10 @@ import java.net.DatagramPacket;
 import java.net.SocketAddress;
 import java.util.ArrayList;
 
-import static net.utp4j.data.UtpPacketUtils.DEF_HEADER_LENGTH;
-import static net.utp4j.data.UtpPacketUtils.joinByteArray;
+import static net.utp4j.data.UtpPacketUtils.*;
+import static net.utp4j.data.UtpPacketUtils.STATE;
+import static net.utp4j.data.bytes.UnsignedTypesUtil.longToUint;
+import static net.utp4j.data.bytes.UnsignedTypesUtil.longToUshort;
 
 /**
  * uTP Package
@@ -316,4 +318,39 @@ public class UtpPacket {
         return code;
     }
 
+    //*** MUST BE MOVED SOMEWHERE
+    public static UtpPacket createPacket(int sequenceNumber, int ackNumber,
+    long connectionIdSending, int utpTimestamp, byte packetType) {
+        UtpPacket pkt = new UtpPacket();
+        pkt.setSequenceNumber(longToUshort(sequenceNumber));
+        pkt.setAckNumber(longToUshort(ackNumber));
+        pkt.setConnectionId(longToUshort(connectionIdSending));
+        pkt.setTimestamp(utpTimestamp);
+        pkt.setTypeVersion(packetType);
+        return pkt;
+    }
+
+    public static UtpPacket createSelectivePacket(
+            int ackNumber,
+            long connectionIdSending,
+            int utpTimestamp,
+            byte packetType,
+            int timestampDifference,
+            long advertisedWindow,
+            SelectiveAckHeaderExtension headerExtension) {
+
+        UtpPacket ackPacket = new UtpPacket();
+        ackPacket.setAckNumber(longToUshort(ackNumber));
+        ackPacket.setConnectionId(longToUshort(connectionIdSending));
+        ackPacket.setTimestamp(utpTimestamp);
+        ackPacket.setTypeVersion(packetType);
+
+
+        ackPacket.setTimestampDifference(timestampDifference);
+        ackPacket.setWindowSize(longToUint(advertisedWindow));
+        ackPacket.setFirstExtension(SELECTIVE_ACK);
+        UtpHeaderExtension[] extensions = {headerExtension};
+        ackPacket.setExtensions(extensions);
+        return ackPacket;
+    }
 }
