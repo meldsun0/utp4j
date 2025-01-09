@@ -26,7 +26,7 @@ public class Utils {
 
     private static boolean isValidUInt16(int value) {
         if (value >= 0 && value <= MAX_UINT16) {
-            Bytes bytes = Bytes.ofUnsignedShort(value);
+            Bytes bytes = Bytes.ofUnsignedShort(value); //short has 2 bytes.
             return bytes.size() == 2;
         }
         return false;

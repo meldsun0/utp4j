@@ -44,6 +44,26 @@ public class UtpPacket {
     private UtpHeaderExtension[] extensions;
     private byte[] payload;
 
+    public UtpPacket(byte typeVersion, byte firstExtension, short connectionId, int timestamp,
+                   int timestampDifference, int windowSize, short sequenceNumber, short ackNumber,
+                   UtpHeaderExtension[] extensions, byte[] payload) {
+        this.typeVersion = typeVersion;
+        this.firstExtension = firstExtension;
+        this.connectionId = connectionId;
+        this.timestamp = timestamp;
+        this.timestampDifference = timestampDifference;
+        this.windowSize = windowSize;
+        this.sequenceNumber = sequenceNumber;
+        this.ackNumber = ackNumber;
+        this.extensions = extensions;
+        this.payload = payload;
+    }
+
+    public UtpPacket(){}
+
+    public static Builder builder() {
+        return new Builder();
+    }
 
     public byte[] getPayload() {
         return payload;
@@ -352,5 +372,86 @@ public class UtpPacket {
         UtpHeaderExtension[] extensions = {headerExtension};
         ackPacket.setExtensions(extensions);
         return ackPacket;
+    }
+
+    public static class Builder {
+        private byte typeVersion;
+        private byte firstExtension;
+        private short connectionId;
+        private int timestamp;
+        private int timestampDifference;
+        private int windowSize;
+        private short sequenceNumber;
+        private short ackNumber;
+        private UtpHeaderExtension[] extensions;
+        private byte[] payload;
+
+        private Builder() {}
+
+        public UtpPacket build() {
+            return new UtpPacket(
+                    this.typeVersion,
+                    this.firstExtension,
+                    this.connectionId,
+                    this.timestamp,
+                    this.timestampDifference,
+                    this.windowSize,
+                    this.sequenceNumber,
+                    this.ackNumber,
+                    this.extensions,
+                    this.payload
+                    );
+        }
+
+        public Builder typeVersion(final byte typeVersion) {
+            this.typeVersion = typeVersion;
+            return this;
+        }
+
+        public Builder firstExtension(final byte firstExtension) {
+            this.firstExtension = firstExtension;
+            return this;
+        }
+
+        public Builder connectionId(final short connectionId) {
+            this.connectionId = connectionId;
+            return this;
+        }
+
+        public Builder timestamp(final int timestamp) {
+            this.timestamp = timestamp;
+            return this;
+        }
+
+        public Builder timestampDifference(final int timestampDifference) {
+            this.timestampDifference = timestampDifference;
+            return this;
+        }
+
+        public Builder windowSize(final int windowSize) {
+            this.windowSize = windowSize;
+            return this;
+        }
+
+        public Builder sequenceNumber(final short sequenceNumber) {
+            this.sequenceNumber = sequenceNumber;
+            return this;
+        }
+
+        public Builder ackNumber(final short ackNumber) {
+            this.ackNumber = ackNumber;
+            return this;
+        }
+
+        public Builder extensions(final UtpHeaderExtension[] extensions) {
+            this.extensions = extensions;
+            return this;
+        }
+
+        public Builder payload(final byte[] payload) {
+            this.payload = payload;
+            return this;
+        }
+
     }
 }

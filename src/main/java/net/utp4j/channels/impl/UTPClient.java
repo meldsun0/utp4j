@@ -92,7 +92,13 @@ public class UTPClient {
 
                 this.currentSequenceNumber = DEF_SEQ_START;
 
-                UtpPacket synPacket = UtpPacketUtils.createSynPacket(longToUshort(getConnectionIdRecievingIncoming()), timeStamper.utpTimeStamp());
+                UtpPacket synPacket = UtpPacket.builder()
+                        .typeVersion(SYN)
+                        .sequenceNumber(longToUbyte(1))
+                        .payload(new byte[]{1, 2, 3, 4, 5, 6})
+                        .connectionId(longToUshort(getConnectionIdRecievingIncoming()))
+                        .timestamp(timeStamper.utpTimeStamp())
+                        .build();
 
                 sendPacket(UtpPacket.createDatagramPacket(synPacket, this.remoteAddressWhichThisSocketIsConnectedTo));
                 this.state = SYN_SENT;
