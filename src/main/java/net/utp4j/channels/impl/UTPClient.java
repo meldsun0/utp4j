@@ -2,6 +2,7 @@ package net.utp4j.channels.impl;
 
 import net.utp4j.channels.UtpSocketState;
 import net.utp4j.channels.impl.alg.UtpAlgConfiguration;
+import net.utp4j.channels.impl.message.ACKMessage;
 import net.utp4j.channels.impl.message.InitConnectionMessage;
 import net.utp4j.channels.impl.message.MessageType;
 import net.utp4j.channels.impl.message.UTPWireMessageDecoder;
@@ -140,6 +141,7 @@ public class UTPClient {
 
     public void recievePacket(DatagramPacket udpPacket) {
         MessageType messageType = UTPWireMessageDecoder.decode(udpPacket);
+
         if (messageType == MessageType.ST_STATE && this.state == UtpSocketState.SYN_SENT) {
             handleSynAckPacket(udpPacket);
         }
@@ -217,37 +219,53 @@ public class UTPClient {
 
 
     public void ackPacket(UtpPacket utpPacket, int timestampDifference, long windowSize) throws IOException {
-        UtpPacket ackPacket = createAckPacket(utpPacket, timestampDifference, windowSize);
-        sendPacket(UtpPacket.createDatagramPacket(ackPacket, this.transportAddress));
+        if (utpPacket.getTypeVersion() != FIN) {
+            setAckNrFromPacketSqNr(utpPacket);
+        }
+        //TODO validate that the seq number is sent!
+        UtpPacket packet = ACKMessage.build(timestampDifference,
+                windowSize, this.timeStamper.utpTimeStamp(),
+                this.UTPConnectionIdSending, this.currentAckNumber);
+        sendPacket(packet);
     }
 
 
     private void handleIncommingConnectionRequest(DatagramPacket udpPacket) {
+        //This packet is from a client, but here I am a server
         UtpPacket utpPacket = UtpPacket.decode(udpPacket);
 
         if (acceptSyn(udpPacket)) {
-            int timeStamp = timeStamper.utpTimeStamp();
-            this.transportAddress = udpPacket.getSocketAddress();
-            setConnectionIdsFromPacket(utpPacket);
-            this.currentSequenceNumber = Utils.randomSeqNumber();
-            setAckNrFromPacketSqNr(utpPacket);
-            printState("[Syn recieved] ");
-            int timestampDifference = timeStamper.utpDifference(timeStamp,
-                    utpPacket.getTimestamp());
-            UtpPacket ackPacket = createAckPacket(utpPacket,
-                    timestampDifference,
-                    UtpAlgConfiguration.MAX_PACKET_SIZE * 1000L);
             try {
-                LOG.debug("sending syn ack");
-                sendPacket(UtpPacket.createDatagramPacket(ackPacket, this.transportAddress));
-                setState(CONNECTED);
+                //STATE
+                int timeStamp = timeStamper.utpTimeStamp();
+                this.transportAddress = udpPacket.getSocketAddress();
+                short connId = utpPacket.getConnectionId();
+                int connIdSender = (connId & 0xFFFF);
+                int connIdRec = (connId & 0xFFFF) + 1;
+                this.UTPConnectionIdSending = connIdSender;
+                this.UTPConnectionIdReceiving = connIdRec;
+                this.currentSequenceNumber = Utils.randomSeqNumber();
+
+                short ackNumberS = utpPacket.getSequenceNumber();
+                this.currentAckNumber = ackNumberS & 0xFFFF;
+
+
+                printState("[Syn recieved] ");
+
+                int timestampDifference = timeStamper.utpDifference(timeStamp, utpPacket.getTimestamp());
+                //TODO validate that the seq number is sent!
+                UtpPacket packet = ACKMessage.build(timestampDifference, UtpAlgConfiguration.MAX_PACKET_SIZE * 1000L, timeStamper.utpTimeStamp(), this.UTPConnectionIdSending, this.currentAckNumber);
+                sendPacket(packet);
+                this.state = CONNECTED;
+
+                LOG.info("sending syn ack");
             } catch (IOException exp) {
                 // TODO: In future?
                 this.transportAddress = null;
                 this.UTPConnectionIdSending = (short) 0;
                 this.UTPConnectionIdReceiving = (short) 0;
-                setCurrentAckNumber(0);
-                setState(SYN_ACKING_FAILED);
+                this.currentAckNumber = 0;
+                this.state = SYN_ACKING_FAILED;
                 exp.printStackTrace();
             }
         } else {
@@ -272,15 +290,6 @@ public class UTPClient {
         setCurrentAckNumber(ackNumberS & 0xFFFF);
     }
 
-    private void setConnectionIdsFromPacket(UtpPacket utpPacket) {
-        short connId = utpPacket.getConnectionId();
-        int connIdSender = (connId & 0xFFFF);
-        int connIdRec = (connId & 0xFFFF) + 1;
-        this.UTPConnectionIdSending = connIdSender;
-        this.UTPConnectionIdReceiving = connIdRec;
-
-
-    }
 
     private void stop() {
         if (listen.compareAndSet(true, false)) {
@@ -471,24 +480,6 @@ public class UTPClient {
             stateLock.unlock();
         }
 
-    }
-
-    protected UtpPacket createAckPacket(UtpPacket pkt, int timedifference,
-                                        long advertisedWindow) {
-        UtpPacket ackPacket = new UtpPacket();
-
-
-        if (pkt.getTypeVersion() != FIN) {
-            setAckNrFromPacketSqNr(pkt);
-        }
-        ackPacket.setAckNumber(longToUshort(getCurrentAckNumber()));
-
-        ackPacket.setTimestampDifference(timedifference);
-        ackPacket.setTimestamp(timeStamper.utpTimeStamp());
-        ackPacket.setConnectionId(longToUshort(this.UTPConnectionIdSending));
-        ackPacket.setTypeVersion(STATE);
-        ackPacket.setWindowSize(longToUint(advertisedWindow));
-        return ackPacket;
     }
 
 

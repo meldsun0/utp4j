@@ -8,7 +8,7 @@ import static net.utp4j.data.bytes.UnsignedTypesUtil.longToUshort;
 
 public class InitConnectionMessage {
 
-    public static UtpPacket build(int timestamp, long connectionId ) {
+    public static UtpPacket build(int timestamp, long connectionId) {
         return UtpPacket.builder()
                 .typeVersion(SYN)
                 .sequenceNumber(longToUbyte(1))

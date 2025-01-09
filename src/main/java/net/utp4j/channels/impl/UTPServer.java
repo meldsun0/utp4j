@@ -50,13 +50,13 @@ public class UTPServer {
 
 
     private void startReading() {
-       CompletableFuture.runAsync(() -> {
+        CompletableFuture.runAsync(() -> {
             while (listen.get()) {
                 byte[] buffer = new byte[MAX_UDP_HEADER_LENGTH + MAX_UTP_PACKET_LENGTH];
                 DatagramPacket dgpkt = new DatagramPacket(buffer, buffer.length);
                 try {
                     socket.receive(dgpkt);
-                    recievePacket(dgpkt);
+                    handleIncomingPacketOnServer(dgpkt);
                 } catch (IOException e) {
                     break;
                 }
@@ -69,30 +69,30 @@ public class UTPServer {
         if (handleDoubleSyn(packet)) {
             return;
         }
-        if (packet != null ) {
-                UTPClient utpChannel = new UTPClient(this.socket, this);
-                utpChannel.recievePacket(packet);
 
-                if (isChannelRegistrationNecessary(utpChannel)) {
-                    connectionIds.put((int) (utpChannel.getConnectionIdRecievingIncoming() & 0xFFFF), utpChannel);
-                }else{
-                    utpChannel = null;
-                    this.initAcceptanceFuture.completeExceptionally(new RuntimeException("Something went wrong!"));
-                }
-            this.initAcceptanceFuture.complete(utpChannel);
+        UTPClient utpChannel = new UTPClient(this.socket, this);
+        utpChannel.recievePacket(packet);
+
+        if (isChannelRegistrationNecessary(utpChannel)) {
+            connectionIds.put((int) (utpChannel.getConnectionIdRecievingIncoming() & 0xFFFF), utpChannel);
+        } else {
+            utpChannel = null;
+            this.initAcceptanceFuture.completeExceptionally(new RuntimeException("Something went wrong!"));
         }
+        this.initAcceptanceFuture.complete(utpChannel);
+
     }
 
     public CompletableFuture<Void> read(ByteBuffer dst) throws ExecutionException, InterruptedException {
         return this.initAcceptanceFuture.get().read(dst);
     }
 
-    public  CompletableFuture<Void> write(ByteBuffer dataToSend) throws ExecutionException, InterruptedException {
+    public CompletableFuture<Void> write(ByteBuffer dataToSend) throws ExecutionException, InterruptedException {
         return this.initAcceptanceFuture.get().write(dataToSend);
     }
 
     private boolean handleDoubleSyn(DatagramPacket packet) {
-        UtpPacket pkt =  UtpPacket.decode(packet);
+        UtpPacket pkt = UtpPacket.decode(packet);
         int connId = pkt.getConnectionId();
         connId = (connId & 0xFFFF) + 1;
         UTPClient client = connectionIds.get(connId);
@@ -104,11 +104,11 @@ public class UTPServer {
         return false;
     }
 
-    public void recievePacket(DatagramPacket packet) {
-        if (UTPWireMessageDecoder.decode(packet)== MessageType.ST_SYN) {
+    public void handleIncomingPacketOnServer(DatagramPacket packet) {
+        if (UTPWireMessageDecoder.decode(packet) == MessageType.ST_SYN) {
             synRecieved(packet);
         } else {
-            UtpPacket utpPacket =  UtpPacket.decode(packet);
+            UtpPacket utpPacket = UtpPacket.decode(packet);
             UTPClient client = connectionIds.get(utpPacket.getConnectionId() & 0xFFFF);
             if (client != null) {
                 client.recievePacket(packet);
