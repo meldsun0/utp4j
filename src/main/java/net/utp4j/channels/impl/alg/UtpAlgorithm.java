@@ -20,6 +20,8 @@ import net.utp4j.channels.impl.log.UtpNopLogger;
 import net.utp4j.channels.impl.log.UtpStatisticLogger;
 import net.utp4j.data.*;
 import net.utp4j.data.bytes.UnsignedTypesUtil;
+import org.apache.tuweni.bytes.Bytes;
+import org.apache.tuweni.units.bigints.UInt32;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -92,18 +94,18 @@ public class UtpAlgorithm {
      * @param pair packet with the meta data.
      */
     public void ackRecieved(UtpTimestampedPacketDTO pair) {
-        int seqNrToAck = pair.utpPacket().getAckNumber() & 0xFFFF;
+        int seqNrToAck = pair.utpPacket().getAckNumber().toInt();
 //		log.debug("Recieved ACK " + pair.utpPacket().toString());
         timeStampNow = timeStamper.timeStamp();
         lastAckRecieved = timeStampNow;
-        int advertisedWindo = pair.utpPacket().getWindowSize() & 0xFFFFFFFF;
+        int advertisedWindo =  pair.utpPacket().getWindowSize().intValue();
         updateAdvertisedWindowSize(advertisedWindo);
         statisticLogger.ackRecieved(seqNrToAck);
         int packetSizeJustAcked = buffer.markPacketAcked(seqNrToAck, timeStampNow,
                 UtpAlgConfiguration.AUTO_ACK_SMALLER_THAN_ACK_NUMBER);
         if (packetSizeJustAcked > 0) {
             updateRtt(timeStampNow, seqNrToAck);
-            updateWindow(pair.utpPacket(), timeStampNow, packetSizeJustAcked, pair.utpTimeStamp());
+            updateWindow(pair.utpPacket(), UTtimeStampNow, packetSizeJustAcked, pair.utpTimeStamp());
         }
         // TODO: With libutp, sometimes null pointer exception -> investigate.
 //			log.debug("utpPacket With Ext: " + pair.utpPacket().toString());
@@ -129,8 +131,8 @@ public class UtpAlgorithm {
                         // thats why we start with j=2. most significant bit is index 7, j would be 9 then.
                         int sackSeqNr = i * 8 + j + seqNrToAck;
                         // sackSeqNr can overflow too !!
-                        if (sackSeqNr > UnsignedTypesUtil.MAX_USHORT) {
-                            sackSeqNr -= (int) UnsignedTypesUtil.MAX_USHORT;
+                        if (sackSeqNr > UnsignedTypesUtil.MAX_SEQUENCE_NR) {
+                            sackSeqNr -= (int) UnsignedTypesUtil.MAX_SEQUENCE_NR;
                         }
                         statisticLogger.sAck(sackSeqNr);
                         // dont ack smaller seq numbers in case of Selective ack !!!!!
@@ -175,7 +177,7 @@ public class UtpAlgorithm {
 
     }
 
-    private void updateWindow(UtpPacket utpPacket, long timestamp, int packetSizeJustAcked, int utpRecieved) {
+    private void updateWindow(UtpPacket utpPacket, UInt32 q, int packetSizeJustAcked, UInt32 utpRecieved) {
         statisticLogger.microSecTimeStamp(timeStampNow);
         currentWindow = buffer.getBytesOnfly();
 
@@ -185,11 +187,10 @@ public class UtpAlgorithm {
 
         statisticLogger.currentWindow(currentWindow);
 
-        long ourDifference = utpPacket.getTimestampDifference() & 0xFFFFFFFF;
-        statisticLogger.ourDifference(ourDifference);
+        long ourDifference = utpPacket.getTimestampDifference().toLong();
         updateOurDelay(ourDifference);
 
-        int theirDifference = timeStamper.utpDifference(utpRecieved, utpPacket.getTimestamp());
+        int theirDifference = utpRecieved.subtract(utpPacket.getTimestamp()).intValue() ;
 
         statisticLogger.theirDifference(theirDifference);
         updateTheirDelay(theirDifference);
@@ -395,7 +396,7 @@ public class UtpAlgorithm {
     }
 
     private void incrementAckNumber() {
-        if (currentAckPosition == UnsignedTypesUtil.MAX_USHORT) {
+        if (currentAckPosition == UnsignedTypesUtil.MAX_SEQUENCE_NR) {
             currentAckPosition = 1;
         } else {
             currentAckPosition++;
@@ -408,8 +409,8 @@ public class UtpAlgorithm {
      */
     public void markFinOnfly(UtpPacket fin) {
         timeStampNow = timeStamper.timeStamp();
-        byte[] finBytes = fin.toByteArray();
-        DatagramPacket dgFin = new DatagramPacket(finBytes, finBytes.length);
+        Bytes finBytes = fin.toByteArray();
+        DatagramPacket dgFin = new DatagramPacket(finBytes.toArray(), finBytes.size());
         UtpTimestampedPacketDTO pkt = new UtpTimestampedPacketDTO(dgFin, fin, timeStampNow, 0);
         buffer.bufferPacket(pkt);
         incrementAckNumber();
@@ -419,7 +420,7 @@ public class UtpAlgorithm {
     private void addPacketToCurrentWindow(UtpPacket pkt) {
         currentWindow += UtpPacketUtils.DEF_HEADER_LENGTH;
         if (pkt.getPayload() != null) {
-            currentWindow += pkt.getPayload().length;
+            currentWindow += pkt.getPayload().size();
         }
     }
 
@@ -449,7 +450,7 @@ public class UtpAlgorithm {
             throw new IllegalArgumentException("sequence number cannot be 0");
         }
         if (sequenceNumber == 1) {
-            currentAckPosition = (int) UnsignedTypesUtil.MAX_USHORT;
+            currentAckPosition = (int) UnsignedTypesUtil.MAX_SEQUENCE_NR;
         } else {
             currentAckPosition = sequenceNumber - 1;
         }

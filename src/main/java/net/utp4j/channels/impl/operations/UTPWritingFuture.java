@@ -9,6 +9,7 @@ import net.utp4j.data.UtpPacket;
 import net.utp4j.data.bytes.UnsignedTypesUtil;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.tuweni.bytes.Bytes;
 
 
 import java.io.IOException;
@@ -129,7 +130,7 @@ public class UTPWritingFuture {
         buffer.get(payload);
 
         UtpPacket utpPacket = channel.getNextDataPacket();
-        utpPacket.setPayload(payload);
+        utpPacket.setPayload(Bytes.of(payload));
         // Calculate remaining buffer size, capped at MAX_UINT
         int leftInBuffer = (int) Math.min(buffer.remaining(), UnsignedTypesUtil.MAX_UINT & 0xFFFFFFFF);
         utpPacket.setWindowSize(leftInBuffer);

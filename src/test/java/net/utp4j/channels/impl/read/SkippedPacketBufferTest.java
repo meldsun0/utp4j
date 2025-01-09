@@ -77,12 +77,12 @@ public class SkippedPacketBufferTest {
     @Test
     public void testOrderOnSeqNrOverflow() throws IOException {
         SkippedPacketBuffer buffer = new SkippedPacketBuffer();
-        buffer.setExpectedSequenceNumber((int) (MAX_USHORT - 2));
+        buffer.setExpectedSequenceNumber((int) (MAX_SEQUENCE_NR - 2));
 
         buffer.bufferPacket(createPacket(1));
-        buffer.bufferPacket(createPacket((int) (MAX_USHORT - 1)));
+        buffer.bufferPacket(createPacket((int) (MAX_SEQUENCE_NR - 1)));
         buffer.bufferPacket(createPacket(2));
-        buffer.bufferPacket(createPacket((int) (MAX_USHORT)));
+        buffer.bufferPacket(createPacket((int) (MAX_SEQUENCE_NR)));
 
         Queue<UtpTimestampedPacketDTO> allPackets = buffer.getAllUntillNextMissing();
 
@@ -92,8 +92,8 @@ public class SkippedPacketBufferTest {
         UtpTimestampedPacketDTO two = allPackets.remove();
 
 
-        assertEquals((int) (MAX_USHORT - 1), minusOne.utpPacket().getSequenceNumber() & 0xFFFF);
-        assertEquals((int) MAX_USHORT, max.utpPacket().getSequenceNumber() & 0xFFFF);
+        assertEquals((int) (MAX_SEQUENCE_NR - 1), minusOne.utpPacket().getSequenceNumber() & 0xFFFF);
+        assertEquals((int) MAX_SEQUENCE_NR, max.utpPacket().getSequenceNumber() & 0xFFFF);
         assertEquals(1, one.utpPacket().getSequenceNumber() & 0xFFFF);
         assertEquals(2, two.utpPacket().getSequenceNumber() & 0xFFFF);
 
@@ -110,7 +110,7 @@ public class SkippedPacketBufferTest {
     @Test
     public void testOrderOnSeqNrOverflowMaxMissing() throws IOException {
         SkippedPacketBuffer buffer = new SkippedPacketBuffer();
-        buffer.setExpectedSequenceNumber((int) MAX_USHORT);
+        buffer.setExpectedSequenceNumber((int) MAX_SEQUENCE_NR);
 
         buffer.bufferPacket(createPacket(1));
         buffer.bufferPacket(createPacket(4));
@@ -183,12 +183,12 @@ public class SkippedPacketBufferTest {
     @Test
     public void testReindexingOverflow() throws IOException {
         SkippedPacketBuffer buffer = new SkippedPacketBuffer();
-        buffer.setExpectedSequenceNumber((int) (MAX_USHORT - 2));
+        buffer.setExpectedSequenceNumber((int) (MAX_SEQUENCE_NR - 2));
 
         buffer.bufferPacket(createPacket(1));
-        buffer.bufferPacket(createPacket((int) (MAX_USHORT - 1)));
+        buffer.bufferPacket(createPacket((int) (MAX_SEQUENCE_NR - 1)));
         buffer.bufferPacket(createPacket(2));
-        buffer.bufferPacket(createPacket((int) (MAX_USHORT)));
+        buffer.bufferPacket(createPacket((int) (MAX_SEQUENCE_NR)));
 
         Queue<UtpTimestampedPacketDTO> allPackets = buffer.getAllUntillNextMissing();
         assertEquals(4, allPackets.size());
@@ -198,8 +198,8 @@ public class SkippedPacketBufferTest {
         UtpTimestampedPacketDTO one = allPackets.remove();
         UtpTimestampedPacketDTO two = allPackets.remove();
 
-        assertEquals((int) (MAX_USHORT - 1), minusOne.utpPacket().getSequenceNumber() & 0xFFFF);
-        assertEquals((int) MAX_USHORT, max.utpPacket().getSequenceNumber() & 0xFFFF);
+        assertEquals((int) (MAX_SEQUENCE_NR - 1), minusOne.utpPacket().getSequenceNumber() & 0xFFFF);
+        assertEquals((int) MAX_SEQUENCE_NR, max.utpPacket().getSequenceNumber() & 0xFFFF);
         assertEquals(1, one.utpPacket().getSequenceNumber() & 0xFFFF);
         assertEquals(2, two.utpPacket().getSequenceNumber() & 0xFFFF);
 
@@ -286,16 +286,16 @@ public class SkippedPacketBufferTest {
     @Test
     public void testReindexingStillMissingOverflow() throws IOException {
         SkippedPacketBuffer buffer = new SkippedPacketBuffer();
-        buffer.setExpectedSequenceNumber((int) (MAX_USHORT) - 2);
+        buffer.setExpectedSequenceNumber((int) (MAX_SEQUENCE_NR) - 2);
 
         //Missing 3, 7
         buffer.bufferPacket(createPacket(4));
         buffer.bufferPacket(createPacket(5));
         buffer.bufferPacket(createPacket(2));
-        buffer.bufferPacket(createPacket((int) (MAX_USHORT) - 1));
+        buffer.bufferPacket(createPacket((int) (MAX_SEQUENCE_NR) - 1));
         buffer.bufferPacket(createPacket(9));
         buffer.bufferPacket(createPacket(8));
-        buffer.bufferPacket(createPacket((int) MAX_USHORT));
+        buffer.bufferPacket(createPacket((int) MAX_SEQUENCE_NR));
         buffer.bufferPacket(createPacket(6));
         buffer.bufferPacket(createPacket(1));
 
@@ -307,8 +307,8 @@ public class SkippedPacketBufferTest {
         UtpTimestampedPacketDTO one = allPackets.remove();
         UtpTimestampedPacketDTO two = allPackets.remove();
 
-        assertEquals((int) (MAX_USHORT - 1), minusOne.utpPacket().getSequenceNumber() & 0xFFFF);
-        assertEquals((int) MAX_USHORT, max.utpPacket().getSequenceNumber() & 0xFFFF);
+        assertEquals((int) (MAX_SEQUENCE_NR - 1), minusOne.utpPacket().getSequenceNumber() & 0xFFFF);
+        assertEquals((int) MAX_SEQUENCE_NR, max.utpPacket().getSequenceNumber() & 0xFFFF);
         assertEquals(1, one.utpPacket().getSequenceNumber() & 0xFFFF);
         assertEquals(2, two.utpPacket().getSequenceNumber() & 0xFFFF);
 
@@ -360,11 +360,11 @@ public class SkippedPacketBufferTest {
     @Test
     public void testHeader() throws IOException {
         SkippedPacketBuffer buffer = new SkippedPacketBuffer();
-        buffer.setExpectedSequenceNumber((int) (MAX_USHORT) - 2);
+        buffer.setExpectedSequenceNumber((int) (MAX_SEQUENCE_NR) - 2);
 
         //Missing 3, 7
-        buffer.bufferPacket(createPacket((int) (MAX_USHORT) - 1));
-        buffer.bufferPacket(createPacket((int) MAX_USHORT));
+        buffer.bufferPacket(createPacket((int) (MAX_SEQUENCE_NR) - 1));
+        buffer.bufferPacket(createPacket((int) MAX_SEQUENCE_NR));
         buffer.bufferPacket(createPacket(1));
         buffer.bufferPacket(createPacket(2));
 

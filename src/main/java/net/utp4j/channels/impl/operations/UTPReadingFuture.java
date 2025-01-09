@@ -192,7 +192,7 @@ public class UTPReadingFuture {
     private void handleUnexpectedPacket(UtpTimestampedPacketDTO timestampedPair) throws IOException {
         int expected = getExpectedSeqNr();
 //		log.debug("handling unexpected packet: " + (timestampedPair.utpPacket().getSequenceNumber() & 0xFFFF));
-        int seqNr = timestampedPair.utpPacket().getSequenceNumber() & 0xFFFF;
+        int seqNr = timestampedPair.utpPacket().getSequenceNumber().toInt();
         if (skippedBuffer.isEmpty()) {
             skippedBuffer.setExpectedSequenceNumber(expected);
         }
@@ -220,14 +220,14 @@ public class UTPReadingFuture {
     }
 
     public boolean isPacketExpected(UtpPacket utpPacket) {
-        int seqNumberFromPacket = utpPacket.getSequenceNumber() & 0xFFFF;
+        int seqNumberFromPacket = utpPacket.getSequenceNumber().toInt();
 //		log.debug("Expected Sequence Number == " + getExpectedSeqNr());
         return getExpectedSeqNr() == seqNumberFromPacket;
     }
 
     private int getExpectedSeqNr() {
         int ackNumber = channel.getCurrentAckNumber();
-        if (ackNumber == UnsignedTypesUtil.MAX_USHORT) {
+        if (ackNumber == UnsignedTypesUtil.MAX_SEQUENCE_NR) {
             return 1;
         }
         return ackNumber + 1;

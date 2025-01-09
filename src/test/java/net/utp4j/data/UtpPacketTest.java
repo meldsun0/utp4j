@@ -116,10 +116,10 @@ public class  UtpPacketTest {
      */
     private UtpPacket createMaxHeader(byte typeVersion, byte firstExtension) {
         UtpPacket header = new UtpPacket();
-        header.setAckNumber(longToUshort(MAX_USHORT));
+        header.setAckNumber(longToUshort(MAX_SEQUENCE_NR));
         header.setFirstExtension(firstExtension);
-        header.setConnectionId(longToUshort(MAX_USHORT));
-        header.setSequenceNumber(longToUshort(MAX_USHORT));
+        header.setConnectionId(longToUshort(MAX_SEQUENCE_NR));
+        header.setSequenceNumber(longToUshort(MAX_SEQUENCE_NR));
         header.setTimestamp(longToUint(MAX_UINT));
         header.setTimestampDifference(longToUint(MAX_UINT));
         header.setTypeVersion(typeVersion);

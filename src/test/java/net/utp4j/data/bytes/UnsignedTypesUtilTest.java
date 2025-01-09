@@ -32,7 +32,7 @@ public class UnsignedTypesUtilTest {
     @Test
     public void testConstants() {
         assertEquals(255L, MAX_UBYTE);
-        assertEquals(65535L, MAX_USHORT);
+        assertEquals(65535L, MAX_SEQUENCE_NR);
         assertEquals(4294967295L, MAX_UINT);
     }
 
@@ -72,7 +72,7 @@ public class UnsignedTypesUtilTest {
      */
     @Test
     public void testToUShort() {
-        String uShortMaxString = toBinaryString(longToUshort(MAX_USHORT));
+        String uShortMaxString = toBinaryString(longToUshort(MAX_SEQUENCE_NR));
         assertEquals("1111111111111111", uShortMaxString);
 
         String uShortMinString = toBinaryString(longToUshort(0L));
@@ -91,7 +91,7 @@ public class UnsignedTypesUtilTest {
 
         try {
             @SuppressWarnings("unused")
-            String uShortOverflowString = toBinaryString(longToUshort(MAX_USHORT + 25));
+            String uShortOverflowString = toBinaryString(longToUshort(MAX_SEQUENCE_NR + 25));
             fail("Expected ByteOverflowException, but none was thrown.");
         } catch (ByteOverflowException exp) {
         }

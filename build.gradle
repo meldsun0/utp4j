@@ -26,9 +26,12 @@ dependencies {
     implementation libs.apache.logging.log4j.core
     implementation libs.google.guava
 
+    implementation libs.tuweni.bytes
     testImplementation libs.org.mockito.mockito.core
     testImplementation libs.org.mockito.mockito.junit.jupiter
     testImplementation libs.org.junit.jupiter.junit.jupiter.api
+    implementation 'org.apache.tuweni:tuweni-units:2.2.0'
+
 
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.7.0'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.7.0'

@@ -18,6 +18,8 @@ import net.utp4j.channels.impl.UtpTimestampedPacketDTO;
 import net.utp4j.data.MicroSecondsTimeStamp;
 import net.utp4j.data.UtpPacketUtils;
 import net.utp4j.data.bytes.UnsignedTypesUtil;
+import org.apache.tuweni.bytes.Bytes;
+import org.apache.tuweni.units.bigints.UInt32;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -68,7 +70,7 @@ public class OutPacketBuffer {
     public void bufferPacket(UtpTimestampedPacketDTO pkt) {
         buffer.add(pkt);
         if (pkt.utpPacket().getPayload() != null) {
-            bytesOnFly += pkt.utpPacket().getPayload().length;
+            bytesOnFly += pkt.utpPacket().getPayload().size();
         }
         bytesOnFly += UtpPacketUtils.DEF_HEADER_LENGTH;
     }
@@ -89,17 +91,17 @@ public class OutPacketBuffer {
         int bytesJustAcked = -1;
         UtpTimestampedPacketDTO pkt = findPacket(seqNrToAck);
         if (pkt != null) {
-            if ((pkt.utpPacket().getSequenceNumber() & 0xFFFF) == seqNrToAck) {
+            if ((pkt.utpPacket().getSequenceNumber().toInt()) == seqNrToAck) {
                 if (!pkt.isPacketAcked()) {
                     int payloadLength = pkt.utpPacket().getPayload() == null ? 0
-                            : pkt.utpPacket().getPayload().length;
+                            : pkt.utpPacket().getPayload().size();
                     bytesJustAcked = payloadLength
                             + UtpPacketUtils.DEF_HEADER_LENGTH;
                 }
                 pkt.setPacketAcked(true);
                 if (ackSmallerThanThisSeq) {
                     for (UtpTimestampedPacketDTO toAck : buffer) {
-                        if ((toAck.utpPacket().getSequenceNumber() & 0xFFFF) == seqNrToAck) {
+                        if ((toAck.utpPacket().getSequenceNumber().toInt()) == seqNrToAck) {
                             break;
                         } else {
                             toAck.setPacketAcked(true);
@@ -109,7 +111,7 @@ public class OutPacketBuffer {
             } else {
                 log.error("ERROR FOUND WRONG SEQ NR: " + seqNrToAck
                         + " but returned "
-                        + (pkt.utpPacket().getSequenceNumber() & 0xFFFF));
+                        + (pkt.utpPacket().getSequenceNumber().toInt()));
             }
         }
         return bytesJustAcked;
@@ -118,20 +120,20 @@ public class OutPacketBuffer {
     private UtpTimestampedPacketDTO findPacket(int seqNrToAck) {
 
         if (!buffer.isEmpty()) {
-            int firstSeqNr = buffer.get(0).utpPacket().getSequenceNumber() & 0xFFFF;
+            int firstSeqNr = buffer.get(0).utpPacket().getSequenceNumber().toInt();
             int index = seqNrToAck - firstSeqNr;
             if (index < 0) {
                 // overflow in seq nr
-                index += UnsignedTypesUtil.MAX_USHORT;
+                index += UnsignedTypesUtil.MAX_SEQUENCE_NR;
             }
 
             if (index < buffer.size()
-                    && (buffer.get(index).utpPacket().getSequenceNumber() & 0xFFFF) == seqNrToAck) {
+                    && (buffer.get(index).utpPacket().getSequenceNumber().toInt()) == seqNrToAck) {
                 return buffer.get(index);
             } else {
                 // bug -> search sequentially until fixed
                 for (UtpTimestampedPacketDTO pkt : buffer) {
-                    if ((pkt.utpPacket().getSequenceNumber() & 0xFFFF) == seqNrToAck) {
+                    if ((pkt.utpPacket().getSequenceNumber().toInt()) == seqNrToAck) {
                         return pkt;
                     }
                 }
@@ -156,7 +158,7 @@ public class OutPacketBuffer {
                 bytesOnFly -= UtpPacketUtils.DEF_HEADER_LENGTH;
                 if (pkt.utpPacket().getPayload() != null) {
                     // in case of a data packet, subtract the payload
-                    bytesOnFly -= pkt.utpPacket().getPayload().length;
+                    bytesOnFly -= pkt.utpPacket().getPayload().size();
                 }
                 toRemove.add(pkt);
             } else {
@@ -205,13 +207,13 @@ public class OutPacketBuffer {
     private void updateResendTimeStamps(UtpTimestampedPacketDTO unackedPkt)
             throws SocketException {
         unackedPkt.utpPacket().setTimestamp(timeStamper.utpTimeStamp());
-        byte[] newBytes = unackedPkt.utpPacket().toByteArray();
+        Bytes bytes = unackedPkt.utpPacket().toByteArray();
         // TB: why create new datagram packet, can't it be reused?
         // TODO: ukackedPacket.datagram.getData()[x] = newtimestamp[0]
         // 		 ukackedPacket.datagram.getData()[x + 1] = newtimestamp[1]
         // 		 ukackedPacket.datagram.getData()[x + 2] = newtimestamp[2]
         // 		 ukackedPacket.datagram.getData()[x + 3] = newtimestamp[3]
-        unackedPkt.setDgPacket(new DatagramPacket(newBytes, newBytes.length,
+        unackedPkt.setDgPacket(new DatagramPacket(bytes.toArray(), bytes.size(),
                 addr));
         unackedPkt.setStamp(currentTime);
     }
@@ -253,7 +255,7 @@ public class OutPacketBuffer {
     public String getSequenceOfLeft() {
         StringBuilder returnString = new StringBuilder();
         for (UtpTimestampedPacketDTO el : buffer) {
-            returnString.append(" ").append(el.utpPacket().getSequenceNumber() & 0xFFFF);
+            returnString.append(" ").append(el.utpPacket().getSequenceNumber().toInt());
         }
         return returnString.toString().trim();
     }

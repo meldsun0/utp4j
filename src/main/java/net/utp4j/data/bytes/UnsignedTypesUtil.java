@@ -4,20 +4,11 @@ package net.utp4j.data.bytes;
 import net.utp4j.data.bytes.exceptions.ByteOverflowException;
 import net.utp4j.data.bytes.exceptions.SignedNumberException;
 
-/**
- * Workaround to java's lack of unsigned types.
- * Methods provided here intend to return integers, bytes and shorts which can be interpreted as unsigned types.
- * E.G. Java's byte initialized with 0xFF will correspond to -1, with this workaround we can use more readable
- * decimal value of 255 to convert it to -1, which in binary form is 11111111 and interpreted as an unsigned
- * value, it would be 255.
- *
- * @author Ivan Iljkic (i.iljkic@gmail.com)
- */
 
 public final class UnsignedTypesUtil {
 
     public static final long MAX_UBYTE = 255;
-    public static final long MAX_USHORT = 65535;
+    public static final long MAX_SEQUENCE_NR = 65535;
     public static final long MAX_UINT = 4294967295L;
 
 
@@ -31,10 +22,10 @@ public final class UnsignedTypesUtil {
     }
 
     public static short longToUshort(long longvalue) {
-        if (longvalue > MAX_USHORT) {
-            throw new ByteOverflowException(getExceptionText(MAX_USHORT, longvalue));
+        if (longvalue > MAX_SEQUENCE_NR) {
+            throw new ByteOverflowException(getExceptionText(MAX_SEQUENCE_NR, longvalue));
         } else if (longvalue < 0) {
-            throw new SignedNumberException(getExceptionText(MAX_USHORT, longvalue));
+            throw new SignedNumberException(getExceptionText(MAX_SEQUENCE_NR, longvalue));
         }
         return (short) (longvalue & 0xFFFF);
     }

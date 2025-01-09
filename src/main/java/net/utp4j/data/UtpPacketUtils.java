@@ -14,6 +14,8 @@
  */
 package net.utp4j.data;
 
+import org.apache.tuweni.bytes.Bytes;
+import org.apache.tuweni.units.bigints.UInt32;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,7 +41,7 @@ public class UtpPacketUtils {
 
 
     public static final byte NO_EXTENSION = longToUbyte(0);
-    public static final byte SELECTIVE_ACK = longToUbyte(1);
+    public static final Bytes SELECTIVE_ACK = Bytes.of(01); ;
 
     public static final int MAX_UTP_PACKET_LENGTH = 1500;
     public static final int MAX_UDP_HEADER_LENGTH = 48;
@@ -47,28 +49,6 @@ public class UtpPacketUtils {
 
     private static final Logger log = LoggerFactory.getLogger(UtpPacketUtils.class);
 
-    public static byte[] joinByteArray(byte[] array1, byte[] array2) {
-
-        int length1 = array1 == null ? 0 : array1.length;
-        int length2 = array2 == null ? 0 : array2.length;
-
-
-        int totalLength = length1 + length2;
-        byte[] returnArray = new byte[totalLength];
-
-        int i = 0;
-        for (; i < length1; i++) {
-            returnArray[i] = array1[i];
-        }
-
-        for (int j = 0; j < length2; j++) {
-            returnArray[i] = array2[j];
-            i++;
-        }
-
-        return returnArray;
-
-    }
 
     /**
      * Creates an Utp-Packet to initialize a connection
@@ -80,19 +60,18 @@ public class UtpPacketUtils {
      *
      * @return {@link UtpPacket}
      */
-    public static UtpPacket createSynPacket(short connectionId, int utpTimestamp ) {
+    public static UtpPacket createSynPacket(Bytes connectionId, UInt32 utpTimestamp ) {
         UtpPacket pkt = new UtpPacket();
         pkt.setTypeVersion(SYN);
-        pkt.setSequenceNumber(longToUbyte(1));
+        pkt.setSequenceNumber(UInt32.valueOf(1).toBytes());
         byte[] pl = {1, 2, 3, 4, 5, 6};
-        pkt.setPayload(pl);
+        pkt.setPayload(Bytes.of(pl));
         pkt.setConnectionId(connectionId);
         pkt.setTimestamp(utpTimestamp);
         return pkt;
     }
 
     public static UtpPacket extractUtpPacket(DatagramPacket dgpkt) {
-
         UtpPacket pkt = new UtpPacket();
         byte[] pktb = dgpkt.getData();
         pkt.setFromByteArray(pktb, dgpkt.getLength(), dgpkt.getOffset());

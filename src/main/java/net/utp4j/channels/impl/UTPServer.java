@@ -5,6 +5,8 @@ import net.utp4j.data.UtpPacket;
 import net.utp4j.data.UtpPacketUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.tuweni.units.bigints.UInt32;
+import org.apache.tuweni.units.bigints.UInt64;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
@@ -30,7 +32,7 @@ public class UTPServer {
     private final CompletableFuture<UTPClient> initAcceptanceFuture;
 
     protected DatagramSocket socket;
-    private final Map<Integer, UTPClient> connectionIds = new HashMap<>();
+    private final Map<UInt32, UTPClient> connectionIds = new HashMap<>();
 
     public UTPServer(InetSocketAddress listenAddress) {
         this.listenAddress = listenAddress;
@@ -72,7 +74,7 @@ public class UTPServer {
                 utpChannel.recievePacket(packet);
 
                 if (isChannelRegistrationNecessary(utpChannel)) {
-                    connectionIds.put((int) (utpChannel.getConnectionIdRecievingIncoming() & 0xFFFF), utpChannel);
+                    connectionIds.put(utpChannel.getConnectionIdRecievingIncoming().toInt(), utpChannel);
                 }else{
                     utpChannel = null;
                     this.initAcceptanceFuture.completeExceptionally(new RuntimeException("Something went wrong!"));
@@ -91,8 +93,7 @@ public class UTPServer {
 
     private boolean handleDoubleSyn(DatagramPacket packet) {
         UtpPacket pkt = UtpPacketUtils.extractUtpPacket(packet);
-        int connId = pkt.getConnectionId();
-        connId = (connId & 0xFFFF) + 1;
+        int connId = pkt.getConnectionId().toInt() + 1;
         UTPClient client = connectionIds.get(connId);
         if (client != null) {
             client.recievePacket(packet);
@@ -107,7 +108,7 @@ public class UTPServer {
             synRecieved(packet);
         } else {
             UtpPacket utpPacket = UtpPacketUtils.extractUtpPacket(packet);
-            UTPClient client = connectionIds.get(utpPacket.getConnectionId() & 0xFFFF);
+            UTPClient client = connectionIds.get(utpPacket.getConnectionId().toInt());
             if (client != null) {
                 client.recievePacket(packet);
             }
@@ -132,6 +133,6 @@ public class UTPServer {
     }
 
     public void unregister(UTPClient UTPClient) {
-        connectionIds.remove((int) UTPClient.getConnectionIdRecievingIncoming() & 0xFFFF);
+        connectionIds.remove(UTPClient.getConnectionIdRecievingIncoming());
     }
 }

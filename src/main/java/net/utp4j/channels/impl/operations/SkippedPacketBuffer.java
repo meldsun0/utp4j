@@ -29,7 +29,7 @@ import java.util.Date;
 import java.util.LinkedList;
 import java.util.Queue;
 
-import static net.utp4j.data.bytes.UnsignedTypesUtil.MAX_USHORT;
+import static net.utp4j.data.bytes.UnsignedTypesUtil.MAX_SEQUENCE_NR;
 
 /**
  * This buffer handles packets that arrived out of order.
@@ -54,7 +54,7 @@ public class SkippedPacketBuffer {
      * @throws IOException
      */
     public void bufferPacket(UtpTimestampedPacketDTO pkt) throws IOException {
-        int sequenceNumber = pkt.utpPacket().getSequenceNumber() & 0xFFFF;
+        int sequenceNumber = pkt.utpPacket().getSequenceNumber().toInt();
         int position = sequenceNumber - expectedSequenceNumber;
         debug_lastSeqNumber = sequenceNumber;
         if (position < 0) {
@@ -75,7 +75,7 @@ public class SkippedPacketBuffer {
     }
 
     private int mapOverflowPosition(int sequenceNumber) {
-        return (int) (MAX_USHORT - expectedSequenceNumber + sequenceNumber);
+        return (int) (MAX_SEQUENCE_NR - expectedSequenceNumber + sequenceNumber);
     }
 
     public void setExpectedSequenceNumber(int seq) {
@@ -150,7 +150,7 @@ public class SkippedPacketBuffer {
 
     public void reindex(int lastSeqNumber) throws IOException {
         int expectedSequenceNumber;
-        if (lastSeqNumber == MAX_USHORT) {
+        if (lastSeqNumber == MAX_SEQUENCE_NR) {
             expectedSequenceNumber = 1;
         } else {
             expectedSequenceNumber = lastSeqNumber + 1;
@@ -199,7 +199,7 @@ public class SkippedPacketBuffer {
                 if (buffer[i] == null) {
                     seq = "_; ";
                 } else {
-                    seq = (buffer[i].utpPacket().getSequenceNumber() & 0xFFFF) + "; ";
+                    seq = (buffer[i].utpPacket().getSequenceNumber().toInt()) + "; ";
                 }
                 bbuffer.put((i + " -> " + seq).getBytes());
                 if (i % 50 == 0) {
