@@ -95,12 +95,12 @@ public class UtpChannelReadingTest {
             Iterator<DatagramPacket> iterator = allValues.iterator();
 
             // extract utp packets from the udp packets.
-            UtpPacket three = UtpPacketUtils.extractUtpPacket(iterator.next());
-            UtpPacket four = UtpPacketUtils.extractUtpPacket(iterator.next());
-            UtpPacket six = UtpPacketUtils.extractUtpPacket(iterator.next());
-            UtpPacket eight = UtpPacketUtils.extractUtpPacket(iterator.next());
-            UtpPacket five = UtpPacketUtils.extractUtpPacket(iterator.next());
-            UtpPacket seven = UtpPacketUtils.extractUtpPacket(iterator.next());
+            UtpPacket three = UtpPacket.decode(iterator.next());
+            UtpPacket four = UtpPacket.decode(iterator.next());
+            UtpPacket six = UtpPacket.decode(iterator.next());
+            UtpPacket eight = UtpPacket.decode(iterator.next());
+            UtpPacket five = UtpPacket.decode(iterator.next());
+            UtpPacket seven = UtpPacket.decode(iterator.next());
 
 
             // first two packets were acked normally

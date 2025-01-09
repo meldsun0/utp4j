@@ -92,7 +92,7 @@ public class UTPServer {
     }
 
     private boolean handleDoubleSyn(DatagramPacket packet) {
-        UtpPacket pkt = UtpPacketUtils.extractUtpPacket(packet);
+        UtpPacket pkt =  UtpPacket.decode(packet);
         int connId = pkt.getConnectionId();
         connId = (connId & 0xFFFF) + 1;
         UTPClient client = connectionIds.get(connId);
@@ -108,7 +108,7 @@ public class UTPServer {
         if (UTPWireMessageDecoder.decode(packet)== MessageType.ST_SYN) {
             synRecieved(packet);
         } else {
-            UtpPacket utpPacket = UtpPacketUtils.extractUtpPacket(packet);
+            UtpPacket utpPacket =  UtpPacket.decode(packet);
             UTPClient client = connectionIds.get(utpPacket.getConnectionId() & 0xFFFF);
             if (client != null) {
                 client.recievePacket(packet);

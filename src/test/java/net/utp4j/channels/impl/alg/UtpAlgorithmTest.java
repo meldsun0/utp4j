@@ -138,7 +138,7 @@ public class UtpAlgorithmTest {
         // 3 past 6 are acked, trigger an resend of 6
         Queue<DatagramPacket> packetsToResend = algorithm.getPacketsToResend();
         assertEquals(1, packetsToResend.size());
-        assertEquals(6, (UtpPacketUtils.extractUtpPacket(packetsToResend.remove()).getSequenceNumber() & 0xFFFF));
+        assertEquals(6, (UtpPacket.decode(packetsToResend.remove()).getSequenceNumber() & 0xFFFF));
 
         // 6 beeing acked now.
         UtpTimestampedPacketDTO ack6 = createSelAckPacket(6, null);

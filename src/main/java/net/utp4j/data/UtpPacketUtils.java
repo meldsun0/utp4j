@@ -72,37 +72,7 @@ public class UtpPacketUtils {
 
 
 
-    public static UtpPacket extractUtpPacket(DatagramPacket dgpkt) {
-
-        UtpPacket pkt = new UtpPacket();
-        byte[] pktb = dgpkt.getData();
-        pkt.setFromByteArray(pktb, dgpkt.getLength(), dgpkt.getOffset());
-        return pkt;
-    }
-
-    public static boolean isSynPkt(UtpPacket packet) {
-
-        if (packet == null) {
-            return false;
-        }
-
-        return packet.getTypeVersion() == SYN;
-
-    }
 
 
-    public static boolean isPacketType(DatagramPacket packet, byte flag) {
-        if (packet == null) {
-            return false;
-        }
-
-        byte[] data = packet.getData();
-
-        if (data != null && data.length >= DEF_HEADER_LENGTH) {
-            return data[0] == flag;
-        }
-
-        return false;
-    }
 
 }

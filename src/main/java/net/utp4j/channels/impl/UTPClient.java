@@ -152,7 +152,7 @@ public class UTPClient {
             handleSynAckPacket(udpPacket);
         }
         switch (messageType) {
-            case ST_RESET -> handleResetPacket(udpPacket);
+            case ST_RESET -> this.close();
             case ST_SYN -> handleIncommingConnectionRequest(udpPacket);
             case ST_DATA, ST_STATE ->  handlePacket(udpPacket);
             case ST_FIN ->  handleFinPacket(udpPacket);
@@ -165,7 +165,7 @@ public class UTPClient {
         try {
             this.state = UtpSocketState.GOT_FIN;
 
-            UtpPacket finPacket = extractUtpPacket(udpPacket);
+            UtpPacket finPacket = UtpPacket.decode(udpPacket);
             long freeBuffer = 0;
             if (reader != null && reader.isAlive()) {
                 freeBuffer = reader.getLeftSpaceInBuffer();
@@ -181,13 +181,8 @@ public class UTPClient {
         }
     }
 
-    private void handleResetPacket(DatagramPacket udpPacket) {
-        this.close();
-    }
-
-
     private void handleSynAckPacket(DatagramPacket udpPacket) {
-        UtpPacket pkt = extractUtpPacket(udpPacket);
+        UtpPacket pkt = UtpPacket.decode(udpPacket);
         if ((pkt.getConnectionId() & 0xFFFF) == getConnectionIdRecievingIncoming()) {
             stateLock.lock();
             setAckNrFromPacketSqNr(pkt);
@@ -223,9 +218,8 @@ public class UTPClient {
     }
 
     private void handlePacket(DatagramPacket udpPacket) {
-        UtpPacket utpPacket = extractUtpPacket(udpPacket);
-        queue.offer(new UtpTimestampedPacketDTO(udpPacket, utpPacket,
-                timeStamper.timeStamp(), timeStamper.utpTimeStamp()));
+        UtpPacket utpPacket = UtpPacket.decode(udpPacket);
+        queue.offer(new UtpTimestampedPacketDTO(udpPacket, utpPacket, timeStamper.timeStamp(), timeStamper.utpTimeStamp()));
 
     }
 
@@ -237,7 +231,7 @@ public class UTPClient {
 
 
     private void handleIncommingConnectionRequest(DatagramPacket udpPacket) {
-        UtpPacket utpPacket = extractUtpPacket(udpPacket);
+        UtpPacket utpPacket = UtpPacket.decode(udpPacket);
 
         if (acceptSyn(udpPacket)) {
             int timeStamp = timeStamper.utpTimeStamp();
@@ -275,7 +269,7 @@ public class UTPClient {
     }
 
     private boolean acceptSyn(DatagramPacket udpPacket) {
-        UtpPacket pkt = extractUtpPacket(udpPacket);
+        UtpPacket pkt = UtpPacket.decode(udpPacket);
         return getState() == CLOSED
                 || (getState() == CONNECTED && isSameAddressAndId(
                 pkt.getConnectionId(), udpPacket.getSocketAddress()));
