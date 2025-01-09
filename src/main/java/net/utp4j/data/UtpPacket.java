@@ -45,8 +45,8 @@ public class UtpPacket {
     private byte[] payload;
 
     public UtpPacket(byte typeVersion, byte firstExtension, short connectionId, int timestamp,
-                   int timestampDifference, int windowSize, short sequenceNumber, short ackNumber,
-                   UtpHeaderExtension[] extensions, byte[] payload) {
+                     int timestampDifference, int windowSize, short sequenceNumber, short ackNumber,
+                     UtpHeaderExtension[] extensions, byte[] payload) {
         this.typeVersion = typeVersion;
         this.firstExtension = firstExtension;
         this.connectionId = connectionId;
@@ -59,7 +59,8 @@ public class UtpPacket {
         this.payload = payload;
     }
 
-    public UtpPacket(){}
+    public UtpPacket() {
+    }
 
     public static Builder builder() {
         return new Builder();
@@ -322,16 +323,16 @@ public class UtpPacket {
 
     public static UtpPacket decode(final DatagramPacket dgpkt) {
         UtpPacket pkt = new UtpPacket();
-        pkt.setFromByteArray( dgpkt.getData(), dgpkt.getLength(), dgpkt.getOffset());
+        pkt.setFromByteArray(dgpkt.getData(), dgpkt.getLength(), dgpkt.getOffset());
         return pkt;
     }
 
 
     public static DatagramPacket createDatagramPacket(UtpPacket packet, SocketAddress socketAddress) throws IOException {
-            byte[] utpPacketBytes = packet.toByteArray();
-            int length = packet.getPacketLength();
-            return new DatagramPacket(utpPacketBytes, length, socketAddress);
-        }
+        byte[] utpPacketBytes = packet.toByteArray();
+        int length = packet.getPacketLength();
+        return new DatagramPacket(utpPacketBytes, length, socketAddress);
+    }
 
     @Override
     public int hashCode() {
@@ -346,7 +347,7 @@ public class UtpPacket {
 
     //*** MUST BE MOVED SOMEWHERE
     public static UtpPacket createPacket(int sequenceNumber, int ackNumber,
-    long connectionIdSending, int utpTimestamp, byte packetType) {
+                                         long connectionIdSending, int utpTimestamp, byte packetType) {
         UtpPacket pkt = new UtpPacket();
         pkt.setSequenceNumber(longToUshort(sequenceNumber));
         pkt.setAckNumber(longToUshort(ackNumber));
@@ -354,30 +355,6 @@ public class UtpPacket {
         pkt.setTimestamp(utpTimestamp);
         pkt.setTypeVersion(packetType);
         return pkt;
-    }
-
-    public static UtpPacket createSelectivePacket(
-            int ackNumber,
-            long connectionIdSending,
-            int utpTimestamp,
-            byte packetType,
-            int timestampDifference,
-            long advertisedWindow,
-            SelectiveAckHeaderExtension headerExtension) {
-
-        UtpPacket ackPacket = new UtpPacket();
-        ackPacket.setAckNumber(longToUshort(ackNumber));
-        ackPacket.setConnectionId(longToUshort(connectionIdSending));
-        ackPacket.setTimestamp(utpTimestamp);
-        ackPacket.setTypeVersion(packetType);
-
-
-        ackPacket.setTimestampDifference(timestampDifference);
-        ackPacket.setWindowSize(longToUint(advertisedWindow));
-        ackPacket.setFirstExtension(SELECTIVE_ACK);
-        UtpHeaderExtension[] extensions = {headerExtension};
-        ackPacket.setExtensions(extensions);
-        return ackPacket;
     }
 
     public static class Builder {
@@ -392,7 +369,8 @@ public class UtpPacket {
         private UtpHeaderExtension[] extensions;
         private byte[] payload;
 
-        private Builder() {}
+        private Builder() {
+        }
 
         public UtpPacket build() {
             return new UtpPacket(
@@ -406,7 +384,7 @@ public class UtpPacket {
                     this.ackNumber,
                     this.extensions,
                     this.payload
-                    );
+            );
         }
 
         public Builder typeVersion(final byte typeVersion) {

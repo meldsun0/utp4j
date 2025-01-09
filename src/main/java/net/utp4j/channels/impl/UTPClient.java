@@ -148,14 +148,14 @@ public class UTPClient {
 
     public void recievePacket(DatagramPacket udpPacket) {
         MessageType messageType = UTPWireMessageDecoder.decode(udpPacket);
-        if(messageType == MessageType.ST_STATE  && this.state == UtpSocketState.SYN_SENT){
+        if (messageType == MessageType.ST_STATE && this.state == UtpSocketState.SYN_SENT) {
             handleSynAckPacket(udpPacket);
         }
         switch (messageType) {
             case ST_RESET -> this.close();
             case ST_SYN -> handleIncommingConnectionRequest(udpPacket);
-            case ST_DATA, ST_STATE ->  handlePacket(udpPacket);
-            case ST_FIN ->  handleFinPacket(udpPacket);
+            case ST_DATA, ST_STATE -> handlePacket(udpPacket);
+            case ST_FIN -> handleFinPacket(udpPacket);
             default -> sendResetPacket(udpPacket.getSocketAddress());
         }
     }
@@ -290,7 +290,7 @@ public class UTPClient {
 
     }
 
-    protected void abortImpl() {
+    protected void stop() {
         if (listen.compareAndSet(true, false)) {
             this.incomingConnectionFuture.complete(null);
             if (server != null) {
@@ -319,7 +319,7 @@ public class UTPClient {
 
 
     public void close() {
-        abortImpl();
+        stop();
         if (isReading()) {
             reader.graceFullInterrupt();
         }
@@ -339,17 +339,19 @@ public class UTPClient {
 
     public void ackAlreadyAcked(SelectiveAckHeaderExtension extension, int timestampDifference,
                                 long windowSize) throws IOException {
-        UtpPacket ackPacket = new UtpPacket();
-        ackPacket.setAckNumber(longToUshort(getCurrentAckNumber()));
-        SelectiveAckHeaderExtension[] extensions = {extension};
-        ackPacket.setExtensions(extensions);
-        ackPacket.setTimestampDifference(timestampDifference);
-        ackPacket.setTimestamp(timeStamper.utpTimeStamp());
-        ackPacket.setConnectionId(longToUshort(this.UTPConnectionIdSending));
-        ackPacket.setTypeVersion(STATE);
-        ackPacket.setWindowSize(longToUint(windowSize));
-        sendPacket(UtpPacket.createDatagramPacket(ackPacket, this.transportAddress));
 
+        SelectiveAckHeaderExtension[] extensions = {extension};
+
+        UtpPacket packet = UtpPacket.builder()
+                .ackNumber(longToUshort(getCurrentAckNumber()))
+                .extensions(extensions)
+                .timestampDifference(timestampDifference)
+                .timestamp(timeStamper.utpTimeStamp())
+                .connectionId(longToUshort(this.UTPConnectionIdSending))
+                .typeVersion(STATE)
+                .windowSize(longToUint(windowSize))
+                .build();
+        this.sendPacket(packet);
     }
 
     public void sendPacket(DatagramPacket pkt) throws IOException {
@@ -359,7 +361,11 @@ public class UTPClient {
 
     }
 
-    /***/
+    public void sendPacket(UtpPacket packet) throws IOException {
+        sendPacket(UtpPacket.createDatagramPacket(packet, this.transportAddress));
+    }
+
+
     public UtpPacket getNextDataPacket() {
         UtpPacket utpPacket = UtpPacket
                 .createPacket(this.currentSequenceNumber,
@@ -386,13 +392,16 @@ public class UTPClient {
 
     public void selectiveAckPacket(SelectiveAckHeaderExtension headerExtension,
                                    int timestampDifference, long advertisedWindow) throws IOException {
-        UtpPacket packet = UtpPacket.createSelectivePacket(
-                this.currentAckNumber,
-                this.UTPConnectionIdSending,
-                timeStamper.utpTimeStamp(),
-                STATE, timestampDifference, advertisedWindow,
-                headerExtension);
-        sendPacket(UtpPacket.createDatagramPacket(packet, this.transportAddress));
+        UtpHeaderExtension[] extensions = {headerExtension};
+        UtpPacket packet = UtpPacket.builder().ackNumber(longToUshort(this.currentAckNumber))
+                .connectionId(longToUshort(this.UTPConnectionIdSending))
+                .timestamp(timeStamper.utpTimeStamp())
+                .typeVersion(STATE)
+                .timestampDifference(timestampDifference)
+                .windowSize(longToUint(advertisedWindow))
+                .firstExtension(SELECTIVE_ACK)
+                .extensions(extensions).build();
+        sendPacket(packet);
     }
 
     /***/
@@ -436,7 +445,7 @@ public class UTPClient {
         LOG.debug("got failing message");
         this.currentSequenceNumber = DEF_SEQ_START;
         this.transportAddress = null;
-        abortImpl();
+        stop();
         setState(CLOSED);
         retryConnectionTimeScheduler.shutdown();
         retryConnectionTimeScheduler = null;
