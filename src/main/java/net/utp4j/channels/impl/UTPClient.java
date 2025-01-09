@@ -2,6 +2,7 @@ package net.utp4j.channels.impl;
 
 import net.utp4j.channels.UtpSocketState;
 import net.utp4j.channels.impl.alg.UtpAlgConfiguration;
+import net.utp4j.channels.impl.message.InitConnectionMessage;
 import net.utp4j.channels.impl.message.MessageType;
 import net.utp4j.channels.impl.message.UTPWireMessageDecoder;
 import net.utp4j.channels.impl.operations.UTPReadingFuture;
@@ -83,28 +84,19 @@ public class UTPClient {
             connection = new CompletableFuture<>();
             try {
                 this.setUnderlyingUDPSocket(new DatagramSocket());
-
                 startReading();
 
                 this.transportAddress = address;
                 this.UTPConnectionIdReceiving = connectionId;
                 this.UTPConnectionIdSending = connectionId + 1;
-
                 this.currentSequenceNumber = DEF_SEQ_START;
 
-                UtpPacket synPacket = UtpPacket.builder()
-                        .typeVersion(SYN)
-                        .sequenceNumber(longToUbyte(1))
-                        .payload(new byte[]{1, 2, 3, 4, 5, 6})
-                        .connectionId(longToUshort(getConnectionIdRecievingIncoming()))
-                        .timestamp(timeStamper.utpTimeStamp())
-                        .build();
-
-                sendPacket(UtpPacket.createDatagramPacket(synPacket, this.transportAddress));
+                UtpPacket message = InitConnectionMessage.build(timeStamper.utpTimeStamp(), this.UTPConnectionIdReceiving);
+                sendPacket(message);
                 this.state = SYN_SENT;
                 this.currentSequenceNumber = Utils.incrementSeqNumber(this.currentSequenceNumber);
 
-                startConnectionTimeOutCounter(synPacket);
+                startConnectionTimeOutCounter(message);
                 printState("[Syn send] ");
             } catch (IOException exp) {
                 //TODO reconnect
@@ -290,7 +282,7 @@ public class UTPClient {
 
     }
 
-    protected void stop() {
+    private void stop() {
         if (listen.compareAndSet(true, false)) {
             this.incomingConnectionFuture.complete(null);
             if (server != null) {
@@ -299,7 +291,6 @@ public class UTPClient {
         } else {
             LOG.warn("An attempt to stop already stopping/stopped UTP server");
         }
-
     }
 
     public CompletableFuture<Void> write(ByteBuffer src) {
@@ -358,13 +349,11 @@ public class UTPClient {
         synchronized (sendLock) {
             this.underlyingUDPSocket.send(pkt);
         }
-
     }
 
     public void sendPacket(UtpPacket packet) throws IOException {
         sendPacket(UtpPacket.createDatagramPacket(packet, this.transportAddress));
     }
-
 
     public UtpPacket getNextDataPacket() {
         UtpPacket utpPacket = UtpPacket
