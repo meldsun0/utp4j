@@ -165,14 +165,14 @@ public class UTPReadingFuture {
 
             } else {
                 if (ackThisPacket()) {
-//					log.debug("acking expected, has, than has nomore");
-                    UTPClient.ackPacket(lastPacket, getTimestampDifference(timestampedPair), getLeftSpaceInBuffer());
+                    UtpPacket ackPacket = UTPClient.buildACKPacket(lastPacket, getTimestampDifference(timestampedPair), getLeftSpaceInBuffer());
+                    UTPClient.sendPacket(ackPacket);
                 }
             }
         } else {
             if (ackThisPacket()) {
-//				log.debug("acking expected, nomore");
-                UTPClient.ackPacket(timestampedPair.utpPacket(), getTimestampDifference(timestampedPair), getLeftSpaceInBuffer());
+                UtpPacket ackPacket =  UTPClient.buildACKPacket(timestampedPair.utpPacket(), getTimestampDifference(timestampedPair), getLeftSpaceInBuffer());
+                UTPClient.sendPacket(ackPacket );
             } else {
                 UTPClient.setCurrentAckNumber(timestampedPair.utpPacket().getSequenceNumber() & 0xFFFF);
             }
