@@ -2,10 +2,7 @@ package net.utp4j.channels.impl;
 
 import net.utp4j.channels.UtpSocketState;
 import net.utp4j.channels.impl.alg.UtpAlgConfiguration;
-import net.utp4j.channels.impl.message.ACKMessage;
-import net.utp4j.channels.impl.message.InitConnectionMessage;
-import net.utp4j.channels.impl.message.MessageType;
-import net.utp4j.channels.impl.message.UTPWireMessageDecoder;
+import net.utp4j.channels.impl.message.*;
 import net.utp4j.channels.impl.operations.UTPReadingFuture;
 import net.utp4j.channels.impl.operations.UTPWritingFuture;
 import net.utp4j.data.*;
@@ -144,7 +141,8 @@ public class UTPClient {
         UtpPacket utpPacket  = UtpPacket.decode(udpPacket);
 
         if (messageType == MessageType.ST_STATE && this.state == UtpSocketState.SYN_SENT) {
-            handleSynAckPacket(utpPacket, udpPacket.getSocketAddress());
+            handleConfirmationOfConnection(utpPacket, udpPacket.getSocketAddress());
+            return;
         }
         switch (messageType) {
             case ST_RESET -> this.close();
@@ -176,7 +174,7 @@ public class UTPClient {
         }
     }
 
-    private void handleSynAckPacket(UtpPacket utpPacket, SocketAddress socketAddress) {
+    private void handleConfirmationOfConnection(UtpPacket utpPacket, SocketAddress socketAddress) {
         if ((utpPacket.getConnectionId() & 0xFFFF) == this.UTPConnectionIdReceiving) {
             stateLock.lock();
             //STATE
@@ -302,12 +300,13 @@ public class UTPClient {
     }
 
     public CompletableFuture<Void> write(ByteBuffer src) {
+        //TODO handle case when connection is not done yet.
         this.writer = new UTPWritingFuture(this, src, timeStamper);
         return writer.startWriting();
-
     }
 
     public CompletableFuture<Void> read(ByteBuffer dst) {
+        //TODO handle case when connection is not done yet.
         this.reader = new UTPReadingFuture(this, dst, timeStamper);
         return reader.startReading();
     }
@@ -364,12 +363,7 @@ public class UTPClient {
     }
 
     public UtpPacket getNextDataPacket() {
-        UtpPacket utpPacket = UtpPacket
-                .createPacket(this.currentSequenceNumber,
-                        this.currentAckNumber,
-                        this.UTPConnectionIdSending,
-                        timeStamper.utpTimeStamp(),
-                        UtpPacketUtils.DATA);
+        UtpPacket utpPacket = DataMessage.build(timeStamper.utpTimeStamp(),  this.UTPConnectionIdSending, this.currentAckNumber,this.currentSequenceNumber);
         this.currentSequenceNumber = Utils.incrementSeqNumber(this.currentSequenceNumber);
         return utpPacket;
     }

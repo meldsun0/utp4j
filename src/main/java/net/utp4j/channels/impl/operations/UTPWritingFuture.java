@@ -25,17 +25,17 @@ public class UTPWritingFuture {
 
     private final ByteBuffer buffer;
     private volatile boolean graceFullInterrupt;
-    private final UTPClient channel;
+    private final UTPClient utpClient;
     private final UtpAlgorithm algorithm;
     private final MicroSecondsTimeStamp timeStamper;
     private CompletableFuture<Void> writerFuture;
 
-    public UTPWritingFuture(UTPClient channel, ByteBuffer buffer,
+    public UTPWritingFuture(UTPClient utpClient, ByteBuffer buffer,
                             MicroSecondsTimeStamp timeStamper) {
         this.buffer = buffer;
-        this.channel = channel;
+        this.utpClient = utpClient;
         this.timeStamper = timeStamper;
-        this.algorithm = new UtpAlgorithm(timeStamper, channel.getRemoteAdress());
+        this.algorithm = new UtpAlgorithm(timeStamper, utpClient.getRemoteAdress());
         this.writerFuture = new CompletableFuture<>();
     }
 
@@ -75,7 +75,7 @@ public class UTPWritingFuture {
     }
 
     private void initializeAlgorithm() {
-        algorithm.initiateAckPosition(channel.getCurrentSequenceNumber());
+        algorithm.initiateAckPosition(utpClient.getCurrentSequenceNumber());
         algorithm.setTimeStamper(timeStamper);
         algorithm.setByteBuffer(buffer);
     }
@@ -83,7 +83,7 @@ public class UTPWritingFuture {
     private void finalizeTransmission(boolean successful) {
         algorithm.end(buffer.position(), successful);
         LOG.debug("Transmission complete.");
-        channel.removeWriter();
+        utpClient.removeWriter();
         if (successful) {
             writerFuture.complete(null);
         } else {
@@ -93,21 +93,22 @@ public class UTPWritingFuture {
 
     private void sendNextPackets() throws IOException {
         while (algorithm.canSendNextPacket() && buffer.hasRemaining()) {
-            DatagramPacket nextPacket = getNextPacket();
-            channel.sendPacket(nextPacket);
+            UtpPacket utpPacket  = utpClient.getNextDataPacket();
+            DatagramPacket nextPacket = buildNextPacket(utpPacket);
+            utpClient.sendPacket(nextPacket);
         }
     }
 
     private void resendPendingPackets() throws IOException {
         Queue<DatagramPacket> packetsToResend = algorithm.getPacketsToResend();
         for (DatagramPacket packet : packetsToResend) {
-            packet.setSocketAddress(channel.getRemoteAdress());
-            channel.sendPacket(packet);
+            packet.setSocketAddress(utpClient.getRemoteAdress());
+            utpClient.sendPacket(packet);
         }
     }
 
     private boolean processAcknowledgements() {
-        BlockingQueue<UtpTimestampedPacketDTO> packetQueue = channel.getDataGramQueue();
+        BlockingQueue<UtpTimestampedPacketDTO> packetQueue = utpClient.getDataGramQueue();
         long waitingTimeMicros = algorithm.getWaitingTimeMicroSeconds();
         try {
             UtpTimestampedPacketDTO packet = packetQueue.poll(waitingTimeMicros, TimeUnit.MICROSECONDS);
@@ -122,13 +123,12 @@ public class UTPWritingFuture {
         }
     }
 
-    private DatagramPacket getNextPacket() throws IOException {
+    private DatagramPacket buildNextPacket(UtpPacket utpPacket) throws IOException {
         int packetSize = Math.min(algorithm.sizeOfNextPacket(), buffer.remaining());
 
         byte[] payload = new byte[packetSize];
         buffer.get(payload);
 
-        UtpPacket utpPacket = channel.getNextDataPacket();
         utpPacket.setPayload(payload);
         // Calculate remaining buffer size, capped at MAX_UINT
         int leftInBuffer = (int) Math.min(buffer.remaining(), UnsignedTypesUtil.MAX_UINT & 0xFFFFFFFF);
@@ -138,7 +138,7 @@ public class UTPWritingFuture {
         DatagramPacket udpPacket = new DatagramPacket(
                 utpPacketBytes,
                 utpPacketBytes.length,
-                channel.getRemoteAdress()
+                utpClient.getRemoteAdress()
         );
 
         // Mark the packet as on the fly
