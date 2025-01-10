@@ -141,13 +141,13 @@ public class UTPClient {
 
     public void recievePacket(DatagramPacket udpPacket) {
         MessageType messageType = UTPWireMessageDecoder.decode(udpPacket);
-
+        UtpPacket utpPacket  = UtpPacket.decode(udpPacket);
         if (messageType == MessageType.ST_STATE && this.state == UtpSocketState.SYN_SENT) {
             handleSynAckPacket(udpPacket);
         }
         switch (messageType) {
             case ST_RESET -> this.close();
-            case ST_SYN -> handleIncommingConnectionRequest(udpPacket);
+            case ST_SYN -> handleIncommingConnectionRequest(utpPacket, udpPacket.getSocketAddress());
             case ST_DATA, ST_STATE -> handlePacket(udpPacket);
             case ST_FIN -> handleFinPacket(udpPacket);
             default -> sendResetPacket(udpPacket.getSocketAddress());
@@ -229,16 +229,14 @@ public class UTPClient {
     }
 
 
-    private void handleIncommingConnectionRequest(DatagramPacket udpPacket) {
+    private void handleIncommingConnectionRequest(UtpPacket utpPacket, SocketAddress socketAddress) {
         //This packet is from a client, but here I am a server
-        UtpPacket utpPacket = UtpPacket.decode(udpPacket);
-
         if (this.state == CLOSED ||
-                (this.state == CONNECTED && isSameAddressAndId(utpPacket.getConnectionId(), udpPacket.getSocketAddress()))) {
+                (this.state == CONNECTED && isSameAddressAndId(utpPacket.getConnectionId(), socketAddress))) {
             try {
                 //STATE
                 int timeStamp = timeStamper.utpTimeStamp();
-                this.transportAddress = udpPacket.getSocketAddress();
+                this.transportAddress = socketAddress;
                 short connId = utpPacket.getConnectionId();
                 int connIdSender = (connId & 0xFFFF);
                 int connIdRec = (connId & 0xFFFF) + 1;
@@ -268,7 +266,7 @@ public class UTPClient {
                 exp.printStackTrace();
             }
         } else {
-            sendResetPacket(udpPacket.getSocketAddress());
+            sendResetPacket(socketAddress);
         }
     }
 
