@@ -22,7 +22,6 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static net.utp4j.channels.UtpSocketState.*;
 import static net.utp4j.data.UtpPacketUtils.*;
-import static net.utp4j.data.bytes.UnsignedTypesUtil.*;
 
 
 public class UTPClient {
@@ -225,7 +224,7 @@ public class UTPClient {
         //TODO validate that the seq number is sent!
         UtpPacket packet = ACKMessage.build(timestampDifference,
                 windowSize, this.timeStamper.utpTimeStamp(),
-                this.UTPConnectionIdSending, this.currentAckNumber);
+                this.UTPConnectionIdSending, this.currentAckNumber, NO_EXTENSION);
         sendPacket(packet);
     }
 
@@ -252,7 +251,7 @@ public class UTPClient {
 
                 int timestampDifference = timeStamper.utpDifference(timeStamp, utpPacket.getTimestamp());
                 //TODO validate that the seq number is sent!
-                UtpPacket packet = ACKMessage.build(timestampDifference, UtpAlgConfiguration.MAX_PACKET_SIZE * 1000L, timeStamper.utpTimeStamp(), this.UTPConnectionIdSending, this.currentAckNumber);
+                UtpPacket packet = ACKMessage.build(timestampDifference, UtpAlgConfiguration.MAX_PACKET_SIZE * 1000L, timeStamper.utpTimeStamp(), this.UTPConnectionIdSending, this.currentAckNumber, NO_EXTENSION);
                 sendPacket(packet);
                 this.state = CONNECTED;
 
@@ -276,32 +275,15 @@ public class UTPClient {
 
     }
 
-    private boolean acceptSyn(DatagramPacket udpPacket) {
-        UtpPacket pkt = UtpPacket.decode(udpPacket);
-        return this.state == CLOSED || (this.state == CONNECTED && isSameAddressAndId(
-                pkt.getConnectionId(), udpPacket.getSocketAddress()));
-    }
-
     protected void setAckNrFromPacketSqNr(UtpPacket utpPacket) {
         short ackNumberS = utpPacket.getSequenceNumber();
         setCurrentAckNumber(ackNumberS & 0xFFFF);
     }
 
 
-    private void stop() {
-        if (listen.compareAndSet(true, false)) {
-            this.incomingConnectionFuture.complete(null);
-            if (server != null) {
-                server.unregister(this);
-            }
-        } else {
-            LOG.warn("An attempt to stop already stopping/stopped UTP server");
-        }
-    }
-
-    public CompletableFuture<Void> write(ByteBuffer src) {
+    public CompletableFuture<Void> write(ByteBuffer buffer) {
         //TODO handle case when connection is not done yet.
-        this.writer = new UTPWritingFuture(this, src, timeStamper);
+        this.writer = new UTPWritingFuture(this, buffer, timeStamper);
         return writer.startWriting();
     }
 
@@ -315,6 +297,16 @@ public class UTPClient {
         return queue;
     }
 
+    private void stop() {
+        if (listen.compareAndSet(true, false)) {
+            this.incomingConnectionFuture.complete(null);
+            if (server != null) {
+                server.unregister(this);
+            }
+        } else {
+            LOG.warn("An attempt to stop already stopping/stopped UTP server");
+        }
+    }
 
     public void close() {
         stop();
@@ -335,11 +327,17 @@ public class UTPClient {
         return (writer != null && writer.isAlive());
     }
 
-    public void sendSelectiveACK(SelectiveAckHeaderExtension extension, int timestampDifference, long windowSize) throws IOException {
+    public UtpPacket buildSelectiveACK(SelectiveAckHeaderExtension extension, int timestampDifference, long windowSize, byte firstExtension) {
         SelectiveAckHeaderExtension[] extensions = {extension};
-        UtpPacket packet = ACKMessage.build(timestampDifference, windowSize, timeStamper.utpTimeStamp(), this.UTPConnectionIdSending, this.currentAckNumber);
+        UtpPacket packet = ACKMessage.build(timestampDifference, windowSize, timeStamper.utpTimeStamp(), this.UTPConnectionIdSending, this.currentAckNumber, firstExtension);
         packet.setExtensions(extensions);
-        this.sendPacket(packet);
+        return packet;
+    }
+
+    public UtpPacket buildDataPacket() {
+        UtpPacket utpPacket = DataMessage.build(timeStamper.utpTimeStamp(), this.UTPConnectionIdSending, this.currentAckNumber, this.currentSequenceNumber);
+        this.currentSequenceNumber = Utils.incrementSeqNumber(this.currentSequenceNumber);
+        return utpPacket;
     }
 
     public void sendPacket(DatagramPacket pkt) throws IOException {
@@ -347,16 +345,12 @@ public class UTPClient {
             this.underlyingUDPSocket.send(pkt);
         }
     }
-
     public void sendPacket(UtpPacket packet) throws IOException {
         sendPacket(UtpPacket.createDatagramPacket(packet, this.transportAddress));
     }
 
-    public UtpPacket getNextDataPacket() {
-        UtpPacket utpPacket = DataMessage.build(timeStamper.utpTimeStamp(), this.UTPConnectionIdSending, this.currentAckNumber, this.currentSequenceNumber);
-        this.currentSequenceNumber = Utils.incrementSeqNumber(this.currentSequenceNumber);
-        return utpPacket;
-    }
+
+
 
 
     public UtpPacket getFinPacket() {
@@ -370,20 +364,6 @@ public class UTPClient {
         return finPacket;
     }
 
-
-    public void selectiveAckPacket(SelectiveAckHeaderExtension headerExtension,
-                                   int timestampDifference, long advertisedWindow) throws IOException {
-        UtpHeaderExtension[] extensions = {headerExtension};
-        UtpPacket packet = UtpPacket.builder().ackNumber(longToUshort(this.currentAckNumber))
-                .connectionId(longToUshort(this.UTPConnectionIdSending))
-                .timestamp(timeStamper.utpTimeStamp())
-                .typeVersion(STATE)
-                .timestampDifference(timestampDifference)
-                .windowSize(longToUint(advertisedWindow))
-                .firstExtension(SELECTIVE_ACK)
-                .extensions(extensions).build();
-        sendPacket(packet);
-    }
 
     /***/
     public void setUnderlyingUDPSocket(DatagramSocket underlyingUDPSocket) {

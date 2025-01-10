@@ -19,6 +19,9 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.logging.log4j.LogManager;
 
+import static net.utp4j.data.UtpPacketUtils.NO_EXTENSION;
+import static net.utp4j.data.UtpPacketUtils.SELECTIVE_ACK;
+
 
 public class UTPReadingFuture {
 
@@ -156,7 +159,8 @@ public class UTPReadingFuture {
                 if (ackThisPacket()) {
 //					log.debug("acking expected, had, still have");
                     SelectiveAckHeaderExtension headerExtension = skippedBuffer.createHeaderExtension();
-                    UTPClient.selectiveAckPacket(headerExtension, getTimestampDifference(timestampedPair), getLeftSpaceInBuffer());
+                    UtpPacket packet = UTPClient.buildSelectiveACK(headerExtension, getTimestampDifference(timestampedPair), getLeftSpaceInBuffer(), SELECTIVE_ACK);
+                    UTPClient.sendPacket(packet);
                 }
 
             } else {
@@ -209,13 +213,13 @@ public class UTPReadingFuture {
             // need to create header extension after the packet is put into the incomming buffer.
             SelectiveAckHeaderExtension headerExtension = skippedBuffer.createHeaderExtension();
             if (ackThisPacket()) {
-//				log.debug("acking unexpected snae");
-                UTPClient.selectiveAckPacket(headerExtension, getTimestampDifference(timestampedPair), getLeftSpaceInBuffer());
+               UtpPacket packet = UTPClient.buildSelectiveACK(headerExtension, getTimestampDifference(timestampedPair), getLeftSpaceInBuffer(), SELECTIVE_ACK);
+               UTPClient.sendPacket(packet);
             }
         } else if (ackThisPacket()) {
             SelectiveAckHeaderExtension headerExtension = skippedBuffer.createHeaderExtension();
-//			log.debug("acking unexpected  nonsane");
-            UTPClient.sendSelectiveACK(headerExtension, getTimestampDifference(timestampedPair), getLeftSpaceInBuffer());
+            UtpPacket packet =  UTPClient.buildSelectiveACK(headerExtension, getTimestampDifference(timestampedPair), getLeftSpaceInBuffer(), NO_EXTENSION);
+            UTPClient.sendPacket(packet);
         }
     }
 

@@ -93,7 +93,7 @@ public class UTPWritingFuture {
 
     private void sendNextPackets() throws IOException {
         while (algorithm.canSendNextPacket() && buffer.hasRemaining()) {
-            UtpPacket utpPacket  = utpClient.getNextDataPacket();
+            UtpPacket utpPacket  = utpClient.buildDataPacket();
             DatagramPacket nextPacket = buildNextPacket(utpPacket);
             utpClient.sendPacket(nextPacket);
         }

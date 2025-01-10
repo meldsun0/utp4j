@@ -10,9 +10,11 @@ public class ACKMessage {
 
     public static UtpPacket build(int timeDifference, long advertisedWindow,
                                   int timestamp, long connectionIdSending,
-                                  int ackNumber) {
+                                  int ackNumber,
+                                  byte firstExtension) {
         return UtpPacket.builder()
                 .typeVersion(STATE)
+                .firstExtension(firstExtension)
                 .connectionId(longToUshort(connectionIdSending))
                 .timestamp(timestamp)
                 .timestampDifference(timeDifference)
