@@ -142,8 +142,9 @@ public class UTPClient {
     public void recievePacket(DatagramPacket udpPacket) {
         MessageType messageType = UTPWireMessageDecoder.decode(udpPacket);
         UtpPacket utpPacket  = UtpPacket.decode(udpPacket);
+
         if (messageType == MessageType.ST_STATE && this.state == UtpSocketState.SYN_SENT) {
-            handleSynAckPacket(udpPacket);
+            handleSynAckPacket(utpPacket, udpPacket.getSocketAddress());
         }
         switch (messageType) {
             case ST_RESET -> this.close();
@@ -175,18 +176,20 @@ public class UTPClient {
         }
     }
 
-    private void handleSynAckPacket(DatagramPacket udpPacket) {
-        UtpPacket pkt = UtpPacket.decode(udpPacket);
-        if ((pkt.getConnectionId() & 0xFFFF) == getConnectionIdRecievingIncoming()) {
+    private void handleSynAckPacket(UtpPacket utpPacket, SocketAddress socketAddress) {
+        if ((utpPacket.getConnectionId() & 0xFFFF) == this.UTPConnectionIdReceiving) {
             stateLock.lock();
-            setAckNrFromPacketSqNr(pkt);
-            setState(CONNECTED);
-            printState("[SynAck recieved] ");
+            //STATE
+            short ackNumberS = utpPacket.getSequenceNumber();
+            this.currentAckNumber = (ackNumberS & 0xFFFF);
+            this.state =  CONNECTED;
             disableConnectionTimeOutCounter();
             connection.complete(null);
+
+            printState("[SynAck recieved] ");
             stateLock.unlock();
         } else {
-            sendResetPacket(udpPacket.getSocketAddress());
+            sendResetPacket(socketAddress);
         }
     }
 
