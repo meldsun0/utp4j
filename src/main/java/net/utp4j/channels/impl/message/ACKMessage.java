@@ -18,7 +18,6 @@ public class ACKMessage {
                 .timestampDifference(timeDifference)
                 .windowSize(longToUint(advertisedWindow))
                 .ackNumber(longToUshort(ackNumber))
-//TODO check if seqNumber shoud be sent
                 .build();
     }
 }

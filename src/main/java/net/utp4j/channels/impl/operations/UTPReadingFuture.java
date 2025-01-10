@@ -42,11 +42,11 @@ public class UTPReadingFuture {
     private int currentPackedAck = 0;
 
     private static final Logger LOG = LogManager.getLogger(UTPReadingFuture.class);
-    private final UTPClient channel;
+    private final UTPClient UTPClient;
     private final CompletableFuture<Void> readFuture;
 
-    public UTPReadingFuture(UTPClient channel, ByteBuffer buff, MicroSecondsTimeStamp timestamp) {
-        this.channel = channel;
+    public UTPReadingFuture(UTPClient UTPClient, ByteBuffer buff, MicroSecondsTimeStamp timestamp) {
+        this.UTPClient = UTPClient;
         this.buffer = buff;
         this.timeStamper = timestamp;
         this.startReadingTimeStamp = timestamp.timeStamp();
@@ -60,7 +60,7 @@ public class UTPReadingFuture {
             IOException exception = null;
             try {
                 while (continueReading()) {
-                    BlockingQueue<UtpTimestampedPacketDTO> queue = channel.getDataGramQueue();
+                    BlockingQueue<UtpTimestampedPacketDTO> queue = UTPClient.getDataGramQueue();
                     UtpTimestampedPacketDTO packetDTO = queue.poll(UtpAlgConfiguration.TIME_WAIT_AFTER_LAST_PACKET / 2, TimeUnit.MICROSECONDS);
                     nowtimeStamp = timeStamper.timeStamp();
                     if (packetDTO != null) {
@@ -99,7 +99,7 @@ public class UTPReadingFuture {
             } catch (IOException | InterruptedException | ArrayIndexOutOfBoundsException e) {
                 LOG.debug("Something went wrong during packet processing!");
             } finally {
-                channel.returnFromReading();
+                UTPClient.returnFromReading();
                 if (successful) {
                     readFuture.complete(null);
                 } else {
@@ -150,27 +150,27 @@ public class UTPReadingFuture {
                 lastPacket = p.utpPacket();
             }
             skippedBuffer.reindex(lastSeqNumber);
-            channel.setCurrentAckNumber(lastSeqNumber);
+            UTPClient.setCurrentAckNumber(lastSeqNumber);
             //if still has skipped packets, need to selectively ack
             if (hasSkippedPackets()) {
                 if (ackThisPacket()) {
 //					log.debug("acking expected, had, still have");
                     SelectiveAckHeaderExtension headerExtension = skippedBuffer.createHeaderExtension();
-                    channel.selectiveAckPacket(headerExtension, getTimestampDifference(timestampedPair), getLeftSpaceInBuffer());
+                    UTPClient.selectiveAckPacket(headerExtension, getTimestampDifference(timestampedPair), getLeftSpaceInBuffer());
                 }
 
             } else {
                 if (ackThisPacket()) {
 //					log.debug("acking expected, has, than has nomore");
-                    channel.ackPacket(lastPacket, getTimestampDifference(timestampedPair), getLeftSpaceInBuffer());
+                    UTPClient.ackPacket(lastPacket, getTimestampDifference(timestampedPair), getLeftSpaceInBuffer());
                 }
             }
         } else {
             if (ackThisPacket()) {
 //				log.debug("acking expected, nomore");
-                channel.ackPacket(timestampedPair.utpPacket(), getTimestampDifference(timestampedPair), getLeftSpaceInBuffer());
+                UTPClient.ackPacket(timestampedPair.utpPacket(), getTimestampDifference(timestampedPair), getLeftSpaceInBuffer());
             } else {
-                channel.setCurrentAckNumber(timestampedPair.utpPacket().getSequenceNumber() & 0xFFFF);
+                UTPClient.setCurrentAckNumber(timestampedPair.utpPacket().getSequenceNumber() & 0xFFFF);
             }
             buffer.put(timestampedPair.utpPacket().getPayload());
             totalPayloadLength += timestampedPair.utpPacket().getPayload().length;
@@ -210,12 +210,12 @@ public class UTPReadingFuture {
             SelectiveAckHeaderExtension headerExtension = skippedBuffer.createHeaderExtension();
             if (ackThisPacket()) {
 //				log.debug("acking unexpected snae");
-                channel.selectiveAckPacket(headerExtension, getTimestampDifference(timestampedPair), getLeftSpaceInBuffer());
+                UTPClient.selectiveAckPacket(headerExtension, getTimestampDifference(timestampedPair), getLeftSpaceInBuffer());
             }
         } else if (ackThisPacket()) {
             SelectiveAckHeaderExtension headerExtension = skippedBuffer.createHeaderExtension();
 //			log.debug("acking unexpected  nonsane");
-            channel.ackAlreadyAcked(headerExtension, getTimestampDifference(timestampedPair), getLeftSpaceInBuffer());
+            UTPClient.sendSelectiveACK(headerExtension, getTimestampDifference(timestampedPair), getLeftSpaceInBuffer());
         }
     }
 
@@ -226,7 +226,7 @@ public class UTPReadingFuture {
     }
 
     private int getExpectedSeqNr() {
-        int ackNumber = channel.getCurrentAckNumber();
+        int ackNumber = UTPClient.getCurrentAckNumber();
         if (ackNumber == UnsignedTypesUtil.MAX_USHORT) {
             return 1;
         }

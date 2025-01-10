@@ -138,7 +138,7 @@ public class UTPClient {
 
     public void recievePacket(DatagramPacket udpPacket) {
         MessageType messageType = UTPWireMessageDecoder.decode(udpPacket);
-        UtpPacket utpPacket  = UtpPacket.decode(udpPacket);
+        UtpPacket utpPacket = UtpPacket.decode(udpPacket);
 
         if (messageType == MessageType.ST_STATE && this.state == UtpSocketState.SYN_SENT) {
             handleConfirmationOfConnection(utpPacket, udpPacket.getSocketAddress());
@@ -180,7 +180,7 @@ public class UTPClient {
             //STATE
             short ackNumberS = utpPacket.getSequenceNumber();
             this.currentAckNumber = (ackNumberS & 0xFFFF);
-            this.state =  CONNECTED;
+            this.state = CONNECTED;
             disableConnectionTimeOutCounter();
             connection.complete(null);
 
@@ -335,20 +335,10 @@ public class UTPClient {
         return (writer != null && writer.isAlive());
     }
 
-    public void ackAlreadyAcked(SelectiveAckHeaderExtension extension, int timestampDifference,
-                                long windowSize) throws IOException {
-
+    public void sendSelectiveACK(SelectiveAckHeaderExtension extension, int timestampDifference, long windowSize) throws IOException {
         SelectiveAckHeaderExtension[] extensions = {extension};
-
-        UtpPacket packet = UtpPacket.builder()
-                .ackNumber(longToUshort(getCurrentAckNumber()))
-                .extensions(extensions)
-                .timestampDifference(timestampDifference)
-                .timestamp(timeStamper.utpTimeStamp())
-                .connectionId(longToUshort(this.UTPConnectionIdSending))
-                .typeVersion(STATE)
-                .windowSize(longToUint(windowSize))
-                .build();
+        UtpPacket packet = ACKMessage.build(timestampDifference, windowSize, timeStamper.utpTimeStamp(), this.UTPConnectionIdSending, this.currentAckNumber);
+        packet.setExtensions(extensions);
         this.sendPacket(packet);
     }
 
@@ -363,7 +353,7 @@ public class UTPClient {
     }
 
     public UtpPacket getNextDataPacket() {
-        UtpPacket utpPacket = DataMessage.build(timeStamper.utpTimeStamp(),  this.UTPConnectionIdSending, this.currentAckNumber,this.currentSequenceNumber);
+        UtpPacket utpPacket = DataMessage.build(timeStamper.utpTimeStamp(), this.UTPConnectionIdSending, this.currentAckNumber, this.currentSequenceNumber);
         this.currentSequenceNumber = Utils.incrementSeqNumber(this.currentSequenceNumber);
         return utpPacket;
     }

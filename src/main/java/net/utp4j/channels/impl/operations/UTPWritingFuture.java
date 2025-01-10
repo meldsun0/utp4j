@@ -123,12 +123,10 @@ public class UTPWritingFuture {
         }
     }
 
-    private DatagramPacket buildNextPacket(UtpPacket utpPacket) throws IOException {
+    private DatagramPacket buildNextPacket(UtpPacket utpPacket) {
         int packetSize = Math.min(algorithm.sizeOfNextPacket(), buffer.remaining());
-
         byte[] payload = new byte[packetSize];
         buffer.get(payload);
-
         utpPacket.setPayload(payload);
         // Calculate remaining buffer size, capped at MAX_UINT
         int leftInBuffer = (int) Math.min(buffer.remaining(), UnsignedTypesUtil.MAX_UINT & 0xFFFFFFFF);
@@ -140,10 +138,8 @@ public class UTPWritingFuture {
                 utpPacketBytes.length,
                 utpClient.getRemoteAdress()
         );
-
         // Mark the packet as on the fly
         algorithm.markPacketOnfly(utpPacket, udpPacket);
-
         return udpPacket;
     }
 
