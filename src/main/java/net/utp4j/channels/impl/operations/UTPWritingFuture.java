@@ -71,7 +71,9 @@ public class UTPWritingFuture {
     }
 
     public void graceFullInterrupt() {
-        graceFullInterrupt = true;
+        if(this.isAlive()){
+            graceFullInterrupt = true;
+        }
     }
 
     private void initializeAlgorithm() {
@@ -83,7 +85,6 @@ public class UTPWritingFuture {
     private void finalizeTransmission(boolean successful) {
         algorithm.end(buffer.position(), successful);
         LOG.debug("Transmission complete.");
-        utpClient.removeWriter();
         if (successful) {
             writerFuture.complete(null);
         } else {

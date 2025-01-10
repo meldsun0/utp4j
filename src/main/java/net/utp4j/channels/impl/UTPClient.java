@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.net.*;
 import java.nio.ByteBuffer;
 
+import java.util.Optional;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantLock;
@@ -49,9 +50,10 @@ public class UTPClient {
 
 
     private ScheduledExecutorService retryConnectionTimeScheduler;
-    private UTPServer server;
-    private UTPWritingFuture writer;
-    private UTPReadingFuture reader;
+
+    private Optional<UTPServer> server = Optional.empty();
+    private Optional<UTPWritingFuture> writer = Optional.empty();
+    private Optional<UTPReadingFuture> reader = Optional.empty();
 
     private AtomicBoolean listen = new AtomicBoolean(false);
     private CompletableFuture<Void> incomingPacketFuture;
@@ -66,7 +68,7 @@ public class UTPClient {
     public UTPClient(DatagramSocket socket, UTPServer server) {
         this.state = CLOSED;
         this.underlyingUDPSocket = socket;
-        this.server = server;
+        this.server = Optional.of(server);
     }
 
 
@@ -153,7 +155,7 @@ public class UTPClient {
         try {
             //STATE
             this.state = UtpSocketState.GOT_FIN;
-            long freeBuffer = (reader != null && reader.isAlive()) ? reader.getLeftSpaceInBuffer() : UtpAlgConfiguration.MAX_PACKET_SIZE;
+            long freeBuffer = (reader.isPresent() && reader.get().isAlive()) ? reader.get().getLeftSpaceInBuffer() : UtpAlgConfiguration.MAX_PACKET_SIZE;
             UtpPacket ackPacket = buildACKPacket(packet, timeStamper.utpDifference(packet.getTimestamp()), freeBuffer);
             sendPacket(ackPacket);
         } catch (IOException exp) {
@@ -245,14 +247,14 @@ public class UTPClient {
 
     public CompletableFuture<Void> write(ByteBuffer buffer) {
         //TODO handle case when connection is not done yet.
-        this.writer = new UTPWritingFuture(this, buffer, timeStamper);
-        return writer.startWriting();
+        this.writer = Optional.of(new UTPWritingFuture(this, buffer, timeStamper));
+        return writer.get().startWriting();
     }
 
     public CompletableFuture<Void> read(ByteBuffer dst) {
         //TODO handle case when connection is not done yet.
-        this.reader = new UTPReadingFuture(this, dst, timeStamper);
-        return reader.startReading();
+        this.reader = Optional.of(new UTPReadingFuture(this, dst, timeStamper));
+        return reader.get().startReading();
     }
 
     public BlockingQueue<UtpTimestampedPacketDTO> getDataGramQueue() {
@@ -269,15 +271,13 @@ public class UTPClient {
         this.state = CLOSED;
         this.currentSequenceNumber = DEF_SEQ_START;
 
-        if (server != null) {
+        this.server.ifPresent(server -> {
             server.unregister(this);
-        }
-        if ((reader != null && reader.isAlive())) {
-            reader.graceFullInterrupt();
-        }
-        if ((writer != null && writer.isAlive())){
-            writer.graceFullInterrupt();
-        }
+        });
+
+        this.reader.ifPresent(UTPReadingFuture::graceFullInterrupt);
+        this.writer.ifPresent(UTPWritingFuture::graceFullInterrupt);
+
     }
 
 
@@ -326,9 +326,9 @@ public class UTPClient {
     public void returnFromReading() {
         reader = null;
         //TODO: dispatch:
-        if (!((writer != null && writer.isAlive()))) {
-            this.state = UtpSocketState.CONNECTED;
-        }
+        this.writer.ifPresent(writer ->{
+            if (writer.isAlive())   this.state = UtpSocketState.CONNECTED;
+        });
     }
 
     //****/
@@ -405,9 +405,5 @@ public class UTPClient {
 
     public void setTransportAddress(InetSocketAddress localhost) {
         this.transportAddress = localhost;
-    }
-
-    public void removeWriter() {
-        writer = null;
     }
 }

@@ -238,7 +238,10 @@ public class UTPReadingFuture {
     }
 
     public void graceFullInterrupt() {
-        this.graceFullInterrupt = true;
+        if(this.isAlive()) {
+            this.graceFullInterrupt = true;
+        }
+
     }
 
 
