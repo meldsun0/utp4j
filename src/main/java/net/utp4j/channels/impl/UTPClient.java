@@ -239,14 +239,13 @@ public class UTPClient {
     }
 
 
-    private void queuePacket( UtpPacket utpPacket, DatagramPacket udpPacket) {
+    private void queuePacket(UtpPacket utpPacket, DatagramPacket udpPacket) {
         queue.offer(new UtpTimestampedPacketDTO(udpPacket, utpPacket, timeStamper.timeStamp(), timeStamper.utpTimeStamp()));
     }
 
-
-
     private void sendResetPacket(SocketAddress addr) {
-        LOG.debug("Sending RST packet");
+        //TODO
+        LOG.debug("Sending RST packet MUST BE IMPLEMENTED");
 
     }
 
@@ -378,36 +377,26 @@ public class UTPClient {
 
     }
 
-    /**
-     * Resends syn packet. called by {@see ConnectionTimeOutRunnable}
-     *
-     * @param synPacket
-     */
     public void resendSynPacket(UtpPacket synPacket) {
         stateLock.lock();
         try {
             int attempts = this.connectionAttempts;
-            LOG.debug("attempt: " + attempts);
-            if (getState() == UtpSocketState.SYN_SENT) {
-                try {
-                    if (attempts < UtpAlgConfiguration.MAX_CONNECTION_ATTEMPTS) {
-                        this.connectionAttempts++;
-
-                        LOG.debug("REATTEMPTING CONNECTION");
-                        sendPacket(UtpPacket.createDatagramPacket(synPacket, this.transportAddress));
-                    } else {
-                        connectionFailed(new SocketTimeoutException());
-                    }
-                } catch (IOException e) {
-                    if (attempts >= UtpAlgConfiguration.MAX_CONNECTION_ATTEMPTS) {
-                        connectionFailed(e);
-                    } // else ignore, try in next attempt
-                }
+            if (this.state != UtpSocketState.SYN_SENT) {
+                return;
+            }
+            if (attempts >= UtpAlgConfiguration.MAX_CONNECTION_ATTEMPTS) {
+                connectionFailed(new SocketTimeoutException());
+                return;
+            }
+            try {
+                this.connectionAttempts++;
+                sendPacket(UtpPacket.createDatagramPacket(synPacket, this.transportAddress));
+            } catch (IOException e) {
+                connectionFailed(e);
             }
         } finally {
             stateLock.unlock();
         }
-
     }
 
 
