@@ -98,7 +98,7 @@ public class ConfigTestWrite {
             }
             file.close();
             fileChannel.close();
-            chanel.close();
+            chanel.stop();
             buffer.clear();
             cpuLoad.reset();
             Thread.sleep(15000);

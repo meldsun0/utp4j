@@ -30,7 +30,7 @@ public class TestWrite {
         CompletableFuture<Void> fut = chanel.write(buffer);
         fut.get();
         System.out.println("writing test done");
-        chanel.close();
+        chanel.stop();
 
     }
 

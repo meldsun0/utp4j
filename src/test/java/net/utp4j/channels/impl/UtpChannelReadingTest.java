@@ -22,10 +22,12 @@ import net.utp4j.data.UtpPacket;
 import net.utp4j.data.UtpPacketUtils;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.platform.commons.util.ReflectionUtils;
 import org.mockito.ArgumentCaptor;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
@@ -45,14 +47,29 @@ import static org.mockito.Mockito.*;
 public class UtpChannelReadingTest {
 
     @Test
-    public void test() throws InterruptedException {
+    public void test() throws InterruptedException, IllegalAccessException {
 
         UtpAlgConfiguration.AUTO_ACK_SMALLER_THAN_ACK_NUMBER = false;
         UtpAlgConfiguration.SKIP_PACKETS_UNTIL_ACK = 1;
 
         //mocking stuff
         UTPClient channel = new UTPClient();
-        channel.setState(UtpSocketState.CONNECTED);
+
+        Field field =
+                ReflectionUtils.findFields(
+                                UTPClient.class,
+                                f -> f.getName().equals("state"),
+                                ReflectionUtils.HierarchyTraversalMode.TOP_DOWN)
+                        .get(0);
+        field.setAccessible(true);
+        field.set(channel , UtpSocketState.CONNECTED);
+
+
+
+
+
+
+
         DatagramSocket socket = mock(DatagramSocket.class);
 
         MicroSecondsTimeStamp stamp = mock(MicroSecondsTimeStamp.class);
@@ -123,7 +140,7 @@ public class UtpChannelReadingTest {
             testPacket(seven, 8, null, UtpPacketUtils.STATE);
 
 
-            channel.close();
+            channel.stop();
             buffer.flip();
 
             // buffer should have 6'000 bytes in it

@@ -4,7 +4,6 @@ import net.utp4j.channels.UtpSocketState;
 import net.utp4j.channels.impl.message.MessageType;
 import net.utp4j.channels.impl.message.UTPWireMessageDecoder;
 import net.utp4j.data.UtpPacket;
-import net.utp4j.data.UtpPacketUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -100,7 +99,6 @@ public class UTPServer {
             client.recievePacket(packet);
             return true;
         }
-
         return false;
     }
 
@@ -126,7 +124,7 @@ public class UTPServer {
             LOG.info("Stopping UTP server listening on {}", listenAddress);
             if (connectionIds.isEmpty()) {
                 socket.close();
-                this.initAcceptanceFuture.get().close();
+                this.initAcceptanceFuture.get().stop();
             }
         } else {
             LOG.info("An attempt to stop already stopping/stopped UTP server");
