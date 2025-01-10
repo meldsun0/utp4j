@@ -77,7 +77,7 @@ public class UTPWritingFuture {
     }
 
     private void initializeAlgorithm() {
-        algorithm.initiateAckPosition(utpClient.getCurrentSequenceNumber());
+        algorithm.initiateAckPosition(utpClient.getSequenceNumber());
         algorithm.setTimeStamper(timeStamper);
         algorithm.setByteBuffer(buffer);
     }
@@ -109,7 +109,7 @@ public class UTPWritingFuture {
     }
 
     private boolean processAcknowledgements() {
-        BlockingQueue<UtpTimestampedPacketDTO> packetQueue = utpClient.getDataGramQueue();
+        BlockingQueue<UtpTimestampedPacketDTO> packetQueue = utpClient.getQueue();
         long waitingTimeMicros = algorithm.getWaitingTimeMicroSeconds();
         try {
             UtpTimestampedPacketDTO packet = packetQueue.poll(waitingTimeMicros, TimeUnit.MICROSECONDS);

@@ -14,7 +14,7 @@
  */
 package net.utp4j.channels.impl;
 
-import net.utp4j.channels.UtpSocketState;
+import net.utp4j.channels.SessionState;
 import net.utp4j.channels.impl.alg.UtpAlgConfiguration;
 import net.utp4j.data.MicroSecondsTimeStamp;
 import net.utp4j.data.UtpHeaderExtension;
@@ -54,19 +54,7 @@ public class UtpChannelReadingTest {
 
         //mocking stuff
         UTPClient channel = new UTPClient();
-
-        Field field =
-                ReflectionUtils.findFields(
-                                UTPClient.class,
-                                f -> f.getName().equals("state"),
-                                ReflectionUtils.HierarchyTraversalMode.TOP_DOWN)
-                        .get(0);
-        field.setAccessible(true);
-        field.set(channel , UtpSocketState.CONNECTED);
-
-
-
-
+        channel.setState(SessionState.CONNECTED);
 
 
 
@@ -77,12 +65,21 @@ public class UtpChannelReadingTest {
         when(stamp.timeStamp()).thenReturn(10000000000000L);
         when(stamp.utpTimeStamp()).thenReturn(1251241241);
 
-        channel.setTimetamper(stamp);
+        Field field2 =
+                ReflectionUtils.findFields(
+                                UTPClient.class,
+                                f -> f.getName().equals("timeStamper"),
+                                ReflectionUtils.HierarchyTraversalMode.TOP_DOWN)
+                        .get(0);
+        field2.setAccessible(true);
+        field2.set(channel , stamp);
+
+
         channel.setUnderlyingUDPSocket(socket);
         channel.setTransportAddress(new InetSocketAddress("localhost", 12345));
 
         // last recieved packet has seqNr. 2, next one will be packet with seqNr. 3
-        channel.setCurrentAckNumber(2);
+        channel.setAckNumber(2);
 
         /*
          * argument captor on socket, which will record all invocations of socket.send(packet)

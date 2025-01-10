@@ -1,7 +1,7 @@
 package net.utp4j.channels;
 
 
-public enum UtpSocketState {
+public enum SessionState {
 
     SYN_SENT,
     CONNECTED,

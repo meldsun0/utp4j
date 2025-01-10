@@ -1,6 +1,6 @@
 package net.utp4j.channels.impl;
 
-import net.utp4j.channels.UtpSocketState;
+import net.utp4j.channels.SessionState;
 import net.utp4j.channels.impl.message.MessageType;
 import net.utp4j.channels.impl.message.UTPWireMessageDecoder;
 import net.utp4j.data.UtpPacket;
@@ -116,7 +116,7 @@ public class UTPServer {
 
     private boolean isChannelRegistrationNecessary(UTPClient channel) {
         return connectionIds.get(channel.getConnectionIdRecievingIncoming()) == null
-                && channel.getState() != UtpSocketState.SYN_ACKING_FAILED;
+                && channel.getState() != SessionState.SYN_ACKING_FAILED;
     }
 
     public void close() throws ExecutionException, InterruptedException {

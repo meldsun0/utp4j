@@ -63,7 +63,7 @@ public class UTPReadingFuture {
             IOException exception = null;
             try {
                 while (continueReading()) {
-                    BlockingQueue<UtpTimestampedPacketDTO> queue = UTPClient.getDataGramQueue();
+                    BlockingQueue<UtpTimestampedPacketDTO> queue = UTPClient.getQueue();
                     UtpTimestampedPacketDTO packetDTO = queue.poll(UtpAlgConfiguration.TIME_WAIT_AFTER_LAST_PACKET / 2, TimeUnit.MICROSECONDS);
                     nowtimeStamp = timeStamper.timeStamp();
                     if (packetDTO != null) {
@@ -153,7 +153,7 @@ public class UTPReadingFuture {
                 lastPacket = p.utpPacket();
             }
             skippedBuffer.reindex(lastSeqNumber);
-            UTPClient.setCurrentAckNumber(lastSeqNumber);
+            UTPClient.setAckNumber(lastSeqNumber);
             //if still has skipped packets, need to selectively ack
             if (hasSkippedPackets()) {
                 if (ackThisPacket()) {
@@ -174,7 +174,7 @@ public class UTPReadingFuture {
                 UtpPacket ackPacket =  UTPClient.buildACKPacket(timestampedPair.utpPacket(), getTimestampDifference(timestampedPair), getLeftSpaceInBuffer());
                 UTPClient.sendPacket(ackPacket );
             } else {
-                UTPClient.setCurrentAckNumber(timestampedPair.utpPacket().getSequenceNumber() & 0xFFFF);
+                UTPClient.setAckNumber(timestampedPair.utpPacket().getSequenceNumber() & 0xFFFF);
             }
             buffer.put(timestampedPair.utpPacket().getPayload());
             totalPayloadLength += timestampedPair.utpPacket().getPayload().length;
@@ -230,7 +230,7 @@ public class UTPReadingFuture {
     }
 
     private int getExpectedSeqNr() {
-        int ackNumber = UTPClient.getCurrentAckNumber();
+        int ackNumber = UTPClient.getAckNumber();
         if (ackNumber == UnsignedTypesUtil.MAX_USHORT) {
             return 1;
         }
