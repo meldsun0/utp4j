@@ -1,17 +1,17 @@
 package net.utp4j.channels.impl;
 
 import net.utp4j.channels.SessionState;
+import net.utp4j.channels.impl.channels.UTPChannel;
+import net.utp4j.channels.impl.channels.UTPChannelListener;
+import net.utp4j.channels.impl.channels.UTPServerChannel;
 import net.utp4j.channels.impl.message.MessageType;
-import net.utp4j.channels.impl.message.UTPWireMessageDecoder;
+import net.utp4j.channels.impl.handlers.UTPWireMessageDecoder;
 import net.utp4j.data.UtpPacket;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
-import java.net.InetSocketAddress;
-import java.net.SocketException;
+import java.net.*;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
@@ -22,16 +22,16 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import static net.utp4j.data.UtpPacketUtils.MAX_UDP_HEADER_LENGTH;
 import static net.utp4j.data.UtpPacketUtils.MAX_UTP_PACKET_LENGTH;
 
-public class UTPServer {
+public class UTPServer implements UTPChannelListener {
 
     private static final Logger LOG = LogManager.getLogger(UTPServer.class);
+
     private final AtomicBoolean listen = new AtomicBoolean(false);
     private final InetSocketAddress listenAddress;
 
-    private final CompletableFuture<UTPClient> initAcceptanceFuture;
-
-    protected DatagramSocket socket;
-    private final Map<Integer, UTPClient> connectionIds = new HashMap<>();
+    private final CompletableFuture<UTPChannel> initAcceptanceFuture;
+    private final Map<Integer, UTPChannel> connectionIds = new HashMap<>();
+    private DatagramSocket socket;
 
     public UTPServer(InetSocketAddress listenAddress) {
         this.listenAddress = listenAddress;
@@ -55,7 +55,19 @@ public class UTPServer {
                 DatagramPacket dgpkt = new DatagramPacket(buffer, buffer.length);
                 try {
                     socket.receive(dgpkt);
-                    handleIncomingPacketOnServer(dgpkt);
+                    if (UTPWireMessageDecoder.decode(dgpkt).getMessageType() == MessageType.ST_SYN) {
+                        synRecieved(dgpkt);
+
+
+
+
+                    } else {
+                        UtpPacket utpPacket = UtpPacket.decode(dgpkt);
+                        UTPChannel client = connectionIds.get(utpPacket.getConnectionId() & 0xFFFF);
+                        if (client != null) {
+                            client.recievePacket(dgpkt);
+                        }
+                    }
                 } catch (IOException e) {
                     break;
                 }
@@ -69,7 +81,7 @@ public class UTPServer {
             return;
         }
 
-        UTPClient utpChannel = new UTPClient(this.socket, this);
+        UTPServerChannel utpChannel = new   UTPServerChannel(this, new);
         utpChannel.recievePacket(packet);
 
         if (isChannelRegistrationNecessary(utpChannel)) {
@@ -94,7 +106,7 @@ public class UTPServer {
         UtpPacket pkt = UtpPacket.decode(packet);
         int connId = pkt.getConnectionId();
         connId = (connId & 0xFFFF) + 1;
-        UTPClient client = connectionIds.get(connId);
+        UTPChannel client = connectionIds.get(connId);
         if (client != null) {
             client.recievePacket(packet);
             return true;
@@ -102,36 +114,31 @@ public class UTPServer {
         return false;
     }
 
-    public void handleIncomingPacketOnServer(DatagramPacket packet) {
-        if (UTPWireMessageDecoder.decode(packet) == MessageType.ST_SYN) {
-            synRecieved(packet);
-        } else {
-            UtpPacket utpPacket = UtpPacket.decode(packet);
-            UTPClient client = connectionIds.get(utpPacket.getConnectionId() & 0xFFFF);
-            if (client != null) {
-                client.recievePacket(packet);
-            }
-        }
-    }
-
-    private boolean isChannelRegistrationNecessary(UTPClient channel) {
+    private boolean isChannelRegistrationNecessary(UTPChannel channel) {
         return connectionIds.get(channel.getConnectionIdRecievingIncoming()) == null
                 && channel.getState() != SessionState.SYN_ACKING_FAILED;
     }
 
-    public void close() throws ExecutionException, InterruptedException {
+    public void stop() throws ExecutionException, InterruptedException {
         if (listen.compareAndSet(true, false)) {
             LOG.info("Stopping UTP server listening on {}", listenAddress);
             if (connectionIds.isEmpty()) {
                 socket.close();
                 this.initAcceptanceFuture.get().stop();
+                //this.connectionIds.forEach();
             }
         } else {
             LOG.info("An attempt to stop already stopping/stopped UTP server");
         }
     }
 
-    public void unregister(UTPClient UTPClient) {
-        connectionIds.remove((int) UTPClient.getConnectionIdRecievingIncoming() & 0xFFFF);
+    public void close(long connectionIdReceiving) {
+        if (!listen.compareAndSet(true, false)) {
+            LOG.warn("An attempt to stop an already stopping/stopped UTP server");
+            return;
+        }
+        connectionIds.remove((int) connectionIdReceiving & 0xFFFF);
+
     }
+
 }

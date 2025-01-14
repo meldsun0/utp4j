@@ -1,12 +1,11 @@
 package net.utp4j.channels.impl;
 
 import net.utp4j.channels.SessionState;
+import net.utp4j.channels.impl.channels.UTPChannel;
 import net.utp4j.data.util.Utils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 import java.util.concurrent.locks.ReentrantLock;
 
 import static net.utp4j.channels.SessionState.*;
@@ -15,13 +14,12 @@ public class Session {
 
     private int MASK = 0xFFFF;
     private static int DEF_SEQ_START = 1;
-    private static final Logger LOG = LogManager.getLogger(UTPClient.class);
+    private static final Logger LOG = LogManager.getLogger(UTPChannel.class);
 
 
     private long connectionIdSending;
     private long connectionIdReceiving;
 
-    private SocketAddress transportAddress;
     private int ackNumber;
     private int sequenceNumber;
     private volatile SessionState state = null;
@@ -34,10 +32,9 @@ public class Session {
         this.state = CLOSED;
     }
 
-    public void initConnection(final SocketAddress transportAddress, final long connectionIdReceiving) {
+    public void initConnection(long connectionIdReceiving) {
         lock.lock();
         try {
-            this.transportAddress = transportAddress;
             this.connectionIdReceiving = connectionIdReceiving;
             this.connectionIdSending = connectionIdReceiving + 1;
             this.sequenceNumber = DEF_SEQ_START;
@@ -46,10 +43,9 @@ public class Session {
         }
     }
 
-    public void initServerConnection(SocketAddress transportAddress, short connectionId, short sequenceNumber) {
+    public void initServerConnection(short connectionId, short sequenceNumber) {
         lock.lock();
         try {
-            this.transportAddress = transportAddress;
             this.connectionIdSending = (connectionId & MASK);
             this.connectionIdReceiving = (connectionId & MASK) + 1;
             this.sequenceNumber = Utils.randomSeqNumber();
@@ -136,9 +132,6 @@ public class Session {
         this.ackNumber = sequenceNumber & MASK;
     }
 
-    public SocketAddress getTransportAddress() {
-        return this.transportAddress;
-    }
 
     public SessionState getState() {
         return this.state;
@@ -160,7 +153,6 @@ public class Session {
     public void syncAckFailed() {
         lock.lock();
         try {
-            this.transportAddress = null;
             this.connectionIdSending = (short) 0;
             this.connectionIdReceiving = (short) 0;
             this.ackNumber = 0;
@@ -183,15 +175,6 @@ public class Session {
         lock.lock();
         try {
             this.ackNumber = ackNumber;
-        } finally {
-            lock.unlock();
-        }
-    }
-
-    public void setTransportAddress(InetSocketAddress transportAddress) {
-        lock.lock();
-        try {
-            this.transportAddress = transportAddress;
         } finally {
             lock.unlock();
         }

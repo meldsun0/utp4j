@@ -23,14 +23,14 @@ public class TestWrite {
         } while (bytesRead != -1);
         System.out.println("file read");
 
-        UTPClient chanel = new UTPClient();
-        CompletableFuture<Void> cFuture = chanel.connect(new InetSocketAddress("localhost", 13345), 333);
+        UTPClient chanel = new UTPClient(new InetSocketAddress("localhost", 13345));
+        CompletableFuture<Void> cFuture = chanel.connect(333);
         cFuture.get();
 
         CompletableFuture<Void> fut = chanel.write(buffer);
         fut.get();
         System.out.println("writing test done");
-        chanel.stop();
+        chanel.close();
 
     }
 

@@ -16,6 +16,7 @@ package net.utp4j.channels.impl;
 
 import net.utp4j.channels.SessionState;
 import net.utp4j.channels.impl.alg.UtpAlgConfiguration;
+import net.utp4j.channels.impl.channels.UTPChannel;
 import net.utp4j.data.MicroSecondsTimeStamp;
 import net.utp4j.data.UtpHeaderExtension;
 import net.utp4j.data.UtpPacket;
@@ -53,7 +54,7 @@ public class UtpChannelReadingTest {
         UtpAlgConfiguration.SKIP_PACKETS_UNTIL_ACK = 1;
 
         //mocking stuff
-        UTPClient channel = new UTPClient();
+        UTPChannel channel = new UTPChannel();
         channel.setState(SessionState.CONNECTED);
 
 
@@ -67,7 +68,7 @@ public class UtpChannelReadingTest {
 
         Field field2 =
                 ReflectionUtils.findFields(
-                                UTPClient.class,
+                                UTPChannel.class,
                                 f -> f.getName().equals("timeStamper"),
                                 ReflectionUtils.HierarchyTraversalMode.TOP_DOWN)
                         .get(0);

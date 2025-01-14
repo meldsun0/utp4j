@@ -67,7 +67,7 @@ public class ConfigTestWrite {
             } while (bytesRead != -1);
             log.debug("file read");
 
-            UTPClient chanel = new UTPClient();
+            UTPClient chanel = new UTPClient(new InetSocketAddress("localhost", 13344));
             int bytesToSend = buffer.position();
 
             if (waitOnManualInput) {
@@ -75,7 +75,7 @@ public class ConfigTestWrite {
                 System.in.read();
             }
 
-            CompletableFuture<Void> cFuture = chanel.connect(new InetSocketAddress("localhost", 13344), 456);
+            CompletableFuture<Void> cFuture = chanel.connect(456);
 
             cFuture.get();
             if (cFuture.isDone()) {
@@ -98,7 +98,7 @@ public class ConfigTestWrite {
             }
             file.close();
             fileChannel.close();
-            chanel.stop();
+            chanel.close();
             buffer.clear();
             cpuLoad.reset();
             Thread.sleep(15000);

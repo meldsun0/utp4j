@@ -14,6 +14,7 @@
  */
 package net.utp4j.data;
 
+import net.utp4j.channels.impl.message.MessageType;
 import net.utp4j.data.bytes.UnsignedTypesUtil;
 
 import java.io.IOException;
@@ -355,6 +356,10 @@ public class UtpPacket {
         pkt.setTimestamp(utpTimestamp);
         pkt.setTypeVersion(packetType);
         return pkt;
+    }
+
+    public MessageType getMessageType() {
+        return MessageType.fromByte(this.typeVersion);
     }
 
     public static class Builder {
