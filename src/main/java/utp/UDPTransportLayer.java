@@ -14,6 +14,18 @@ public class UDPTransportLayer implements TransportLayer {
 
     protected DatagramSocket socket;
     private final Object sendLock = new Object();
+    private DatagramSocket clientSocket;
+    private InetSocketAddress serverSocketAddress;
+
+
+    public UDPTransportLayer(String serverAddress, int serverPort) {
+        try {
+            this.socket = new DatagramSocket();
+            this.serverSocketAddress = new InetSocketAddress(serverAddress, serverPort);
+        } catch (SocketException e) {
+            throw new RuntimeException(e);
+        }
+    }
 
     public UDPTransportLayer(InetSocketAddress address) {
         try {
@@ -27,6 +39,8 @@ public class UDPTransportLayer implements TransportLayer {
     @Override
     public void sendPacket(DatagramPacket packet) throws IOException {
         synchronized (sendLock) {
+            packet.setAddress(serverSocketAddress.getAddress());
+            packet.setPort(serverSocketAddress.getPort());
             this.socket.send(packet);
         }
     }
@@ -46,7 +60,7 @@ public class UDPTransportLayer implements TransportLayer {
 
     @Override
     public SocketAddress getRemoteAddress() {
-        return this.socket.getRemoteSocketAddress();
+        return this.serverSocketAddress;
     }
 
     @Override

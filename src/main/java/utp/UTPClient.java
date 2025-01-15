@@ -34,7 +34,6 @@ public class UTPClient {
     private Session session;
 
     private final BlockingQueue<UtpTimestampedPacketDTO> queue = new LinkedBlockingQueue<UtpTimestampedPacketDTO>();
-    private DatagramSocket underlyingUDPSocket;
 
     private MicroSecondsTimeStamp timeStamper = new MicroSecondsTimeStamp();
     private ScheduledExecutorService retryConnectionTimeScheduler;
@@ -62,6 +61,7 @@ public class UTPClient {
         try {
             connection = new CompletableFuture<>();
             this.session.initConnection(this.transportLayer.getRemoteAddress(), connectionId);
+            this.startListeningIncomingPackets();
             UtpPacket message = InitConnectionMessage.build(timeStamper.utpTimeStamp(), connectionId);
             sendPacket(message);
             this.session.updateStateOnConnectionInitSuccess();
@@ -230,6 +230,19 @@ public class UTPClient {
         }
     }
 
+    private void startListeningIncomingPackets() {
+        CompletableFuture.runAsync(() -> {
+            while (listen.get()) {
+                DatagramPacket dgpkt = null;
+                try {
+                    dgpkt = this.transportLayer.onPacketReceive();
+                    this.recievePacket(dgpkt);
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        });
+    }
 
     //refactor
 

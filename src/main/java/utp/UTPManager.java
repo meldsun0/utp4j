@@ -1,7 +1,9 @@
 package utp;
 
 import org.apache.tuweni.bytes.Bytes;
+import utp.data.UtpPacket;
 
+import java.net.DatagramPacket;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
@@ -15,8 +17,8 @@ public class UTPManager {
 
 
 
-    public CompletableFuture<ByteBuffer> getContent(int connectionId, Bytes nodeRecord, InetSocketAddress socketAddress) {
-        UTPClient utpClient = this.registerClient(connectionId, socketAddress);
+    public CompletableFuture<ByteBuffer> getContent(int connectionId, Bytes nodeRecord,  final TransportLayer transportLayer) {
+        UTPClient utpClient = this.registerClient(connectionId, transportLayer);
         return utpClient.connect(connectionId)
                 .thenCompose(result -> {
                     ByteBuffer buffer = ByteBuffer.allocate(150000000);
@@ -28,8 +30,8 @@ public class UTPManager {
     }
 
 
-    private UTPClient registerClient(int connectionId, InetSocketAddress socketAddress){
-        UTPClient utpClient = new UTPClient(new UDPTransportLayer(socketAddress));
+    private UTPClient registerClient(int connectionId, final TransportLayer transportLayer){
+        UTPClient utpClient = new UTPClient(transportLayer);
         if(!connections.containsKey(connectionId)) {
             this.connections.put(connectionId & 0xFFFF,utpClient);
         }
@@ -39,6 +41,14 @@ public class UTPManager {
 
     private void removeClient(int connectionId){
         connections.remove((int) connectionId & 0xFFFF);
+    }
+
+    public void onPacketReceive(DatagramPacket udp ){
+        UtpPacket utpPacket = UtpPacket.decode(udp);
+        UTPClient client = connections.get(utpPacket.getConnectionId() & 0xFFFF);
+        if (client != null) {
+            client.recievePacket(udp);
+        }
     }
 
 }

@@ -141,7 +141,7 @@ public class UTPReadingFuture {
             int payloadLength = timestampedPair.utpPacket().getPayload().length;
             lastPayloadLength = payloadLength;
             totalPayloadLength += payloadLength;
-            Queue<UtpTimestampedPacketDTO> packets = skippedBuffer.getAllUntillNextMissing();
+            Queue<UtpTimestampedPacketDTO> packets = skippedBuffer.getAllUntilNextMissing();
             int lastSeqNumber = 0;
             if (packets.isEmpty()) {
                 lastSeqNumber = timestampedPair.utpPacket().getSequenceNumber() & 0xFFFF;

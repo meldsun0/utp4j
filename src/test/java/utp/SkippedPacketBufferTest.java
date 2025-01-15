@@ -50,7 +50,7 @@ public class SkippedPacketBufferTest {
         buffer.bufferPacket(createPacket(9));
         buffer.bufferPacket(createPacket(6));
 
-        Queue<UtpTimestampedPacketDTO> allPackets = buffer.getAllUntillNextMissing();
+        Queue<UtpTimestampedPacketDTO> allPackets = buffer.getAllUntilNextMissing();
 
         UtpTimestampedPacketDTO six = allPackets.remove();
         UtpTimestampedPacketDTO seven = allPackets.remove();
@@ -83,7 +83,7 @@ public class SkippedPacketBufferTest {
         buffer.bufferPacket(createPacket(2));
         buffer.bufferPacket(createPacket((int) (MAX_USHORT)));
 
-        Queue<UtpTimestampedPacketDTO> allPackets = buffer.getAllUntillNextMissing();
+        Queue<UtpTimestampedPacketDTO> allPackets = buffer.getAllUntilNextMissing();
 
         UtpTimestampedPacketDTO minusOne = allPackets.remove();
         UtpTimestampedPacketDTO max = allPackets.remove();
@@ -117,7 +117,7 @@ public class SkippedPacketBufferTest {
         buffer.bufferPacket(createPacket(2));
 
 
-        Queue<UtpTimestampedPacketDTO> allPackets = buffer.getAllUntillNextMissing();
+        Queue<UtpTimestampedPacketDTO> allPackets = buffer.getAllUntilNextMissing();
 
         UtpTimestampedPacketDTO one = allPackets.remove();
         UtpTimestampedPacketDTO two = allPackets.remove();
@@ -150,7 +150,7 @@ public class SkippedPacketBufferTest {
         buffer.bufferPacket(createPacket(9));
         buffer.bufferPacket(createPacket(6));
 
-        Queue<UtpTimestampedPacketDTO> allPackets = buffer.getAllUntillNextMissing();
+        Queue<UtpTimestampedPacketDTO> allPackets = buffer.getAllUntilNextMissing();
 
         assertEquals(4, allPackets.size());
         UtpTimestampedPacketDTO six = allPackets.remove();
@@ -165,7 +165,7 @@ public class SkippedPacketBufferTest {
 
         buffer.reindex(9);
 
-        Queue<UtpTimestampedPacketDTO> noPackets = buffer.getAllUntillNextMissing();
+        Queue<UtpTimestampedPacketDTO> noPackets = buffer.getAllUntilNextMissing();
 
         assertEquals(0, noPackets.size());
         assertTrue(buffer.isEmpty());
@@ -189,7 +189,7 @@ public class SkippedPacketBufferTest {
         buffer.bufferPacket(createPacket(2));
         buffer.bufferPacket(createPacket((int) (MAX_USHORT)));
 
-        Queue<UtpTimestampedPacketDTO> allPackets = buffer.getAllUntillNextMissing();
+        Queue<UtpTimestampedPacketDTO> allPackets = buffer.getAllUntilNextMissing();
         assertEquals(4, allPackets.size());
 
         UtpTimestampedPacketDTO minusOne = allPackets.remove();
@@ -203,7 +203,7 @@ public class SkippedPacketBufferTest {
         assertEquals(2, two.utpPacket().getSequenceNumber() & 0xFFFF);
 
         buffer.reindex(2);
-        Queue<UtpTimestampedPacketDTO> noPackets = buffer.getAllUntillNextMissing();
+        Queue<UtpTimestampedPacketDTO> noPackets = buffer.getAllUntilNextMissing();
         assertEquals(0, noPackets.size());
         assertTrue(buffer.isEmpty());
 
@@ -234,7 +234,7 @@ public class SkippedPacketBufferTest {
         buffer.bufferPacket(createPacket(15));
 
 
-        Queue<UtpTimestampedPacketDTO> allPackets = buffer.getAllUntillNextMissing();
+        Queue<UtpTimestampedPacketDTO> allPackets = buffer.getAllUntilNextMissing();
         assertEquals(4, allPackets.size());
 
         UtpTimestampedPacketDTO six = allPackets.remove();
@@ -248,7 +248,7 @@ public class SkippedPacketBufferTest {
         assertEquals(9, nine.utpPacket().getSequenceNumber() & 0xFFFF);
 
         buffer.reindex(9);
-        Queue<UtpTimestampedPacketDTO> middlePackets = buffer.getAllUntillNextMissing();
+        Queue<UtpTimestampedPacketDTO> middlePackets = buffer.getAllUntilNextMissing();
         assertEquals(3, middlePackets.size());
 
         UtpTimestampedPacketDTO p11 = middlePackets.remove();
@@ -260,7 +260,7 @@ public class SkippedPacketBufferTest {
         assertEquals(13, p13.utpPacket().getSequenceNumber() & 0xFFFF);
 
         buffer.reindex(13);
-        Queue<UtpTimestampedPacketDTO> lastPackets = buffer.getAllUntillNextMissing();
+        Queue<UtpTimestampedPacketDTO> lastPackets = buffer.getAllUntilNextMissing();
         assertEquals(2, lastPackets.size());
 
         UtpTimestampedPacketDTO p15 = lastPackets.remove();
@@ -270,7 +270,7 @@ public class SkippedPacketBufferTest {
         assertEquals(16, p16.utpPacket().getSequenceNumber() & 0xFFFF);
 
         buffer.reindex(16);
-        Queue<UtpTimestampedPacketDTO> noPackets = buffer.getAllUntillNextMissing();
+        Queue<UtpTimestampedPacketDTO> noPackets = buffer.getAllUntilNextMissing();
         assertEquals(0, noPackets.size());
         assertTrue(buffer.isEmpty());
 
@@ -298,7 +298,7 @@ public class SkippedPacketBufferTest {
         buffer.bufferPacket(createPacket(6));
         buffer.bufferPacket(createPacket(1));
 
-        Queue<UtpTimestampedPacketDTO> allPackets = buffer.getAllUntillNextMissing();
+        Queue<UtpTimestampedPacketDTO> allPackets = buffer.getAllUntilNextMissing();
         assertEquals(4, allPackets.size());
 
         UtpTimestampedPacketDTO minusOne = allPackets.remove();
@@ -312,7 +312,7 @@ public class SkippedPacketBufferTest {
         assertEquals(2, two.utpPacket().getSequenceNumber() & 0xFFFF);
 
         buffer.reindex(2);
-        Queue<UtpTimestampedPacketDTO> middlePackets = buffer.getAllUntillNextMissing();
+        Queue<UtpTimestampedPacketDTO> middlePackets = buffer.getAllUntilNextMissing();
         assertEquals(3, middlePackets.size());
 
         UtpTimestampedPacketDTO p4 = middlePackets.remove();
@@ -324,7 +324,7 @@ public class SkippedPacketBufferTest {
         assertEquals(6, p6.utpPacket().getSequenceNumber() & 0xFFFF);
 
         buffer.reindex(6);
-        Queue<UtpTimestampedPacketDTO> lastPackets = buffer.getAllUntillNextMissing();
+        Queue<UtpTimestampedPacketDTO> lastPackets = buffer.getAllUntilNextMissing();
         assertEquals(2, lastPackets.size());
 
         UtpTimestampedPacketDTO p8 = lastPackets.remove();
@@ -334,7 +334,7 @@ public class SkippedPacketBufferTest {
         assertEquals(9, p9.utpPacket().getSequenceNumber() & 0xFFFF);
 
         buffer.reindex(9);
-        Queue<UtpTimestampedPacketDTO> noPackets = buffer.getAllUntillNextMissing();
+        Queue<UtpTimestampedPacketDTO> noPackets = buffer.getAllUntilNextMissing();
         assertEquals(0, noPackets.size());
         assertTrue(buffer.isEmpty());
     }
