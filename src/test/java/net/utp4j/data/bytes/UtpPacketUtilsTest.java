@@ -16,7 +16,7 @@ package net.utp4j.data.bytes;
 
 import org.junit.jupiter.api.Test;
 
-import static net.utp4j.data.UtpPacketUtils.*;
+import static utp.data.UtpPacketUtils.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class UtpPacketUtilsTest {

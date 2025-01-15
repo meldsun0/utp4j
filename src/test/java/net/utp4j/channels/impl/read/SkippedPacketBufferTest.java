@@ -14,16 +14,16 @@
  */
 package net.utp4j.channels.impl.read;
 
-import net.utp4j.channels.impl.UtpTimestampedPacketDTO;
-import net.utp4j.channels.impl.operations.SkippedPacketBuffer;
-import net.utp4j.data.SelectiveAckHeaderExtension;
-import net.utp4j.data.UtpPacket;
+import utp.UtpTimestampedPacketDTO;
+import utp.operations.SkippedPacketBuffer;
+import utp.data.SelectiveAckHeaderExtension;
+import utp.data.UtpPacket;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.Queue;
 
-import static net.utp4j.data.bytes.UnsignedTypesUtil.*;
+import static utp.data.bytes.UnsignedTypesUtil.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 

@@ -15,6 +15,8 @@
 package net.utp4j.channels.impl.alg;
 
 import org.junit.jupiter.api.Test;
+import utp.algo.MinimumDelay;
+import utp.algo.UtpAlgConfiguration;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 

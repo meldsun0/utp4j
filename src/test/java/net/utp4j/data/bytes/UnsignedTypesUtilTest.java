@@ -14,12 +14,13 @@
  */
 package net.utp4j.data.bytes;
 
-import net.utp4j.data.bytes.exceptions.ByteOverflowException;
-import net.utp4j.data.bytes.exceptions.SignedNumberException;
+import utp.data.bytes.UnsignedTypesUtil;
+import utp.data.bytes.exceptions.ByteOverflowException;
+import utp.data.bytes.exceptions.SignedNumberException;
 import org.junit.jupiter.api.Test;
 
 import static net.utp4j.data.bytes.BinaryToStringTestHelper.toBinaryString;
-import static net.utp4j.data.bytes.UnsignedTypesUtil.*;
+import static utp.data.bytes.UnsignedTypesUtil.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.fail;
 

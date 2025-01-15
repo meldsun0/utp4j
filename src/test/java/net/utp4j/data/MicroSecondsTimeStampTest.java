@@ -15,6 +15,7 @@
 package net.utp4j.data;
 
 import org.junit.jupiter.api.Test;
+import utp.data.MicroSecondsTimeStamp;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 

@@ -14,12 +14,13 @@
  */
 package net.utp4j.channels.impl;
 
-import net.utp4j.channels.SessionState;
-import net.utp4j.channels.impl.alg.UtpAlgConfiguration;
-import net.utp4j.data.MicroSecondsTimeStamp;
-import net.utp4j.data.UtpHeaderExtension;
-import net.utp4j.data.UtpPacket;
-import net.utp4j.data.UtpPacketUtils;
+import utp.SessionState;
+import utp.UTPClient;
+import utp.algo.UtpAlgConfiguration;
+import utp.data.MicroSecondsTimeStamp;
+import utp.data.UtpHeaderExtension;
+import utp.data.UtpPacket;
+import utp.data.UtpPacketUtils;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.platform.commons.util.ReflectionUtils;
@@ -36,8 +37,8 @@ import java.util.Iterator;
 import java.util.List;
 
 import static net.utp4j.data.bytes.BinaryToStringTestHelper.toBinaryString;
-import static net.utp4j.data.bytes.UnsignedTypesUtil.longToUbyte;
-import static net.utp4j.data.bytes.UnsignedTypesUtil.longToUshort;
+import static utp.data.bytes.UnsignedTypesUtil.longToUbyte;
+import static utp.data.bytes.UnsignedTypesUtil.longToUshort;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.*;

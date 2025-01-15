@@ -15,8 +15,12 @@
 package net.utp4j.data;
 
 import org.junit.jupiter.api.Test;
+import utp.data.SelectiveAckHeaderExtension;
+import utp.data.UtpHeaderExtension;
+import utp.data.UtpPacket;
+import utp.data.UtpPacketUtils;
 
-import static net.utp4j.data.bytes.UnsignedTypesUtil.*;
+import static utp.data.bytes.UnsignedTypesUtil.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class  UtpPacketTest {

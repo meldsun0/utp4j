@@ -14,14 +14,15 @@
  */
 package net.utp4j.channels.impl.alg;
 
-import net.utp4j.channels.impl.UtpTimestampedPacketDTO;
-import net.utp4j.data.MicroSecondsTimeStamp;
-import net.utp4j.data.SelectiveAckHeaderExtension;
-import net.utp4j.data.UtpPacket;
-import net.utp4j.data.UtpPacketUtils;
+import utp.UtpTimestampedPacketDTO;
+import utp.data.MicroSecondsTimeStamp;
+import utp.data.SelectiveAckHeaderExtension;
+import utp.data.UtpPacket;
+import utp.data.UtpPacketUtils;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.junit.jupiter.MockitoExtension;
+import utp.algo.*;
 
 import java.net.DatagramPacket;
 import java.net.InetSocketAddress;
@@ -30,7 +31,7 @@ import java.net.SocketException;
 import java.nio.ByteBuffer;
 import java.util.Queue;
 
-import static net.utp4j.data.bytes.UnsignedTypesUtil.longToUshort;
+import static utp.data.bytes.UnsignedTypesUtil.longToUshort;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
