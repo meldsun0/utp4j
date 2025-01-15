@@ -12,7 +12,7 @@
  * License for the specific language governing permissions and limitations under
  * the License.
  */
-package net.utp4j.channels.impl.alg;
+package utp.algo;
 
 import utp.UtpTimestampedPacketDTO;
 import utp.data.MicroSecondsTimeStamp;
@@ -21,7 +21,6 @@ import utp.data.UtpPacketUtils;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.junit.jupiter.MockitoExtension;
-import utp.algo.OutPacketBuffer;
 
 import java.net.DatagramPacket;
 import java.net.InetSocketAddress;

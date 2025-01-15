@@ -15,6 +15,7 @@
 package utp.data;
 
 import utp.data.bytes.UnsignedTypesUtil;
+import utp.message.MessageType;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
@@ -353,6 +354,11 @@ public class UtpPacket {
         pkt.setTimestamp(utpTimestamp);
         pkt.setTypeVersion(packetType);
         return pkt;
+    }
+
+
+    public MessageType getMessageType() {
+        return MessageType.fromByte(this.typeVersion);
     }
 
     public static class Builder {

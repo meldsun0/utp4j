@@ -12,9 +12,8 @@
  * License for the specific language governing permissions and limitations under
  * the License.
  */
-package net.utp4j.channels.impl.read;
+package utp;
 
-import utp.UtpTimestampedPacketDTO;
 import utp.operations.SkippedPacketBuffer;
 import utp.data.SelectiveAckHeaderExtension;
 import utp.data.UtpPacket;

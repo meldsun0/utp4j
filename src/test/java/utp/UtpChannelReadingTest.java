@@ -12,10 +12,8 @@
  * License for the specific language governing permissions and limitations under
  * the License.
  */
-package net.utp4j.channels.impl;
+package utp;
 
-import utp.SessionState;
-import utp.UTPClient;
 import utp.algo.UtpAlgConfiguration;
 import utp.data.MicroSecondsTimeStamp;
 import utp.data.UtpHeaderExtension;
@@ -30,13 +28,12 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.net.DatagramPacket;
-import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.List;
 
-import static net.utp4j.data.bytes.BinaryToStringTestHelper.toBinaryString;
+import static utp.data.bytes.BinaryToStringTestHelper.toBinaryString;
 import static utp.data.bytes.UnsignedTypesUtil.longToUbyte;
 import static utp.data.bytes.UnsignedTypesUtil.longToUshort;
 import static org.junit.jupiter.api.Assertions.*;
@@ -52,14 +49,14 @@ public class UtpChannelReadingTest {
 
         UtpAlgConfiguration.AUTO_ACK_SMALLER_THAN_ACK_NUMBER = false;
         UtpAlgConfiguration.SKIP_PACKETS_UNTIL_ACK = 1;
+        UDPTransportLayer udpTransportLayer = mock(UDPTransportLayer.class);
 
         //mocking stuff
-        UTPClient channel = new UTPClient();
+        UTPClient channel = new UTPClient(udpTransportLayer);
         channel.setState(SessionState.CONNECTED);
 
 
 
-        DatagramSocket socket = mock(DatagramSocket.class);
 
         MicroSecondsTimeStamp stamp = mock(MicroSecondsTimeStamp.class);
         when(stamp.utpDifference(anyInt(), anyInt())).thenReturn(500000000);
@@ -76,7 +73,6 @@ public class UtpChannelReadingTest {
         field2.set(channel , stamp);
 
 
-        channel.setUnderlyingUDPSocket(socket);
         channel.setTransportAddress(new InetSocketAddress("localhost", 12345));
 
         // last recieved packet has seqNr. 2, next one will be packet with seqNr. 3
@@ -105,7 +101,7 @@ public class UtpChannelReadingTest {
             Thread.sleep(1000);
 
             // verify 6 ack packets where send and capture them
-            verify(socket, times(6)).send(ackOne.capture());
+            verify(udpTransportLayer, times(6)).sendPacket(ackOne.capture());
             List<DatagramPacket> allValues = ackOne.getAllValues();
             Iterator<DatagramPacket> iterator = allValues.iterator();
 

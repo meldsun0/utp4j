@@ -12,11 +12,9 @@
  * License for the specific language governing permissions and limitations under
  * the License.
  */
-package net.utp4j.channels.impl.alg;
+package utp.algo;
 
 import org.junit.jupiter.api.Test;
-import utp.algo.MinimumDelay;
-import utp.algo.UtpAlgConfiguration;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 

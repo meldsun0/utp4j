@@ -111,6 +111,7 @@ public class UTPReadingFuture {
                 LOG.info("Buffer position: {}, Buffer limit: {}", buffer.position(), buffer.limit());
                 LOG.info("Total payload length: {}", totalPayloadLength);
                 LOG.debug("Reader stopped.");
+                UTPClient.stop();
             }
         });
         return this.readFuture;

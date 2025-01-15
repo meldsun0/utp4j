@@ -36,46 +36,36 @@ public class UTPClient {
     private final BlockingQueue<UtpTimestampedPacketDTO> queue = new LinkedBlockingQueue<UtpTimestampedPacketDTO>();
     private DatagramSocket underlyingUDPSocket;
 
-    private final Object sendLock = new Object();
     private MicroSecondsTimeStamp timeStamper = new MicroSecondsTimeStamp();
     private ScheduledExecutorService retryConnectionTimeScheduler;
 
-    private Optional<UTPServer> server = Optional.empty();
     private Optional<UTPWritingFuture> writer = Optional.empty();
     private Optional<UTPReadingFuture> reader = Optional.empty();
 
     private AtomicBoolean listen = new AtomicBoolean(false);
 
-    private CompletableFuture<Void> incomingPacketFuture;
     private CompletableFuture<Void> connection;
+    private final TransportLayer transportLayer;
 
-
-    public UTPClient() {
+    public UTPClient(final TransportLayer transportLayer) {
         this.session = new Session();
+        this.transportLayer =  transportLayer;
     }
 
-    public UTPClient(DatagramSocket socket, UTPServer server) {
-        this.session = new Session();
-        this.underlyingUDPSocket = socket;
-        this.server = Optional.of(server);
-    }
-
-
-    public CompletableFuture<Void> connect(SocketAddress address, int connectionId) {
-        checkNotNull(address, "Address");
+    public CompletableFuture<Void> connect(int connectionId) {
+        checkNotNull(this.transportLayer.getRemoteAddress(), "Address");
         checkArgument(Utils.isConnectionValid(connectionId), "ConnectionId invalid number");
-        LOG.info("Starting UTP server listening on {}", connectionId);
+        LOG.info("Send Connection message to {}", connectionId);
         if (!listen.compareAndSet(false, true)) {
             CompletableFuture.failedFuture(new IllegalStateException("Attempted to start an already started server listening on " + connectionId));
         }
         try {
             connection = new CompletableFuture<>();
-            this.setUnderlyingUDPSocket(new DatagramSocket());
-            this.startListeningIncomingPackets();
-            this.session.initConnection(address, connectionId);
+            this.session.initConnection(this.transportLayer.getRemoteAddress(), connectionId);
             UtpPacket message = InitConnectionMessage.build(timeStamper.utpTimeStamp(), connectionId);
             sendPacket(message);
             this.session.updateStateOnConnectionInitSuccess();
+
             startConnectionTimeOutCounter(message);
             this.session.printState();
         } catch (IOException exp) {
@@ -84,34 +74,15 @@ public class UTPClient {
         return connection;
     }
 
-
-    private void startListeningIncomingPackets() {
-        this.incomingPacketFuture = CompletableFuture.runAsync(() -> {
-            while (listen.get()) {
-                byte[] buffer = new byte[MAX_UDP_HEADER_LENGTH + MAX_UTP_PACKET_LENGTH];
-                DatagramPacket dgpkt = new DatagramPacket(buffer, buffer.length);
-                try {
-                    this.underlyingUDPSocket.receive(dgpkt);
-                    recievePacket(dgpkt);
-                } catch (IOException e) {
-                    break;
-                }
-            }
-        });
-    }
-
-
     public void recievePacket(DatagramPacket udpPacket) {
-        MessageType messageType = UTPWireMessageDecoder.decode(udpPacket);
-        UtpPacket utpPacket = UtpPacket.decode(udpPacket);
+        UtpPacket utpPacket = UTPWireMessageDecoder.decode(udpPacket);
 
-        if (messageType == MessageType.ST_STATE && this.session.getState() == SessionState.SYN_SENT) {
+        if (utpPacket.getMessageType() == MessageType.ST_STATE && this.session.getState() == SessionState.SYN_SENT) {
             handleConfirmationOfConnection(utpPacket, udpPacket.getSocketAddress());
             return;
         }
-        switch (messageType) {
-            case ST_RESET -> this.stop();
-            case ST_SYN -> handleIncommingConnectionRequest(utpPacket, udpPacket.getSocketAddress());
+        switch (utpPacket.getMessageType()) {
+            case ST_RESET, ST_SYN -> this.stop();
             case ST_DATA, ST_STATE -> queuePacket(utpPacket, udpPacket);
             case ST_FIN -> handleFinPacket(utpPacket);
             default -> sendResetPacket(udpPacket.getSocketAddress());
@@ -141,34 +112,6 @@ public class UTPClient {
         }
     }
 
-    private void handleIncommingConnectionRequest(UtpPacket utpPacket, SocketAddress socketAddress) {
-        //This packet is from a client, but here I am a server
-        if (this.session.getState() == CLOSED ||
-                (this.session.getState() == CONNECTED && isSameAddressAndId(utpPacket.getConnectionId(), socketAddress))) {
-            try {
-                this.session.initServerConnection(socketAddress, utpPacket.getConnectionId(), utpPacket.getSequenceNumber());
-                session.printState();
-                int timestampDifference = timeStamper.utpDifference(timeStamper.utpTimeStamp(), utpPacket.getTimestamp());
-                //TODO validate that the seq number is sent!
-                UtpPacket packet = ACKMessage.build(timestampDifference,
-                        UtpAlgConfiguration.MAX_PACKET_SIZE * 1000L,
-                        timeStamper.utpTimeStamp(), this.session.getConnectionIdSending(),
-                        this.session.getAckNumber(), NO_EXTENSION);
-                sendPacket(packet);
-                this.session.changeState(CONNECTED);
-            } catch (IOException exp) {
-                // TODO:
-                this.session.syncAckFailed();
-                exp.printStackTrace();
-            }
-        } else {
-            sendResetPacket(socketAddress);
-        }
-    }
-
-    private boolean isSameAddressAndId(long connectionId, SocketAddress addr) {
-        return (connectionId & 0xFFFFFFFF) == getConnectionIdRecievingIncoming() && addr.equals(getRemoteAdress());
-    }
 
     private void disableConnectionTimeOutCounter() {
         if (retryConnectionTimeScheduler != null) {
@@ -209,11 +152,7 @@ public class UTPClient {
             LOG.warn("An attempt to stop an already stopping/stopped UTP server");
             return;
         }
-        this.incomingPacketFuture.complete(null);
         this.session.close();
-        this.server.ifPresent(server -> {
-            server.unregister(this);
-        });
         this.reader.ifPresent(UTPReadingFuture::graceFullInterrupt);
         this.writer.ifPresent(UTPWritingFuture::graceFullInterrupt);
     }
@@ -244,22 +183,11 @@ public class UTPClient {
     }
 
     public void sendPacket(DatagramPacket pkt) throws IOException {
-        synchronized (sendLock) {
-            this.underlyingUDPSocket.send(pkt);
-        }
+            this.transportLayer.sendPacket(pkt);
     }
 
     public void sendPacket(UtpPacket packet) throws IOException {
         sendPacket(UtpPacket.createDatagramPacket(packet, this.session.getTransportAddress()));
-    }
-
-
-    /*********/
-    public void setUnderlyingUDPSocket(DatagramSocket underlyingUDPSocket) {
-        if (this.underlyingUDPSocket != null) {
-            this.underlyingUDPSocket.close();
-        }
-        this.underlyingUDPSocket = underlyingUDPSocket;
     }
 
 

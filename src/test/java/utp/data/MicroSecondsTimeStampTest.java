@@ -12,7 +12,7 @@
  * License for the specific language governing permissions and limitations under
  * the License.
  */
-package net.utp4j.data;
+package utp.data;
 
 import org.junit.jupiter.api.Test;
 import utp.data.MicroSecondsTimeStamp;
