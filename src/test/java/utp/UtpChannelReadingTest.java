@@ -24,6 +24,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.platform.commons.util.ReflectionUtils;
 import org.mockito.ArgumentCaptor;
 import org.mockito.junit.jupiter.MockitoExtension;
+import utp.network.UDPTransportLayer;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
@@ -200,14 +201,13 @@ public class UtpChannelReadingTest {
 
     }
 
-    public DatagramPacket createPacket(int seqNumber) {
+    public UtpPacket createPacket(int seqNumber) {
         UtpPacket utpPacket = new UtpPacket();
         utpPacket.setSequenceNumber(longToUshort(seqNumber));
         utpPacket.setTypeVersion(UtpPacketUtils.DATA);
         utpPacket.setPayload(getPayload(seqNumber));
         utpPacket.setWindowSize(1);
-        byte[] array = utpPacket.toByteArray();
-        return new DatagramPacket(array, array.length);
+        return utpPacket;
     }
 
     private byte[] getPayload(int seqNumber) {

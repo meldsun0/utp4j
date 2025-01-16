@@ -242,9 +242,7 @@ public class UtpAlgorithm {
         Queue<UtpTimestampedPacketDTO> toResend = buffer.getPacketsToResend(UtpAlgConfiguration.MAX_BURST_SEND);
 
         for (UtpTimestampedPacketDTO utpTimestampedPacketDTO : toResend) {
-            queue.add(UtpPacket.decode(utpTimestampedPacketDTO.dataGram()));
-
-//			log.debug("Resending: " + utpTimestampedPacketDTO.utpPacket().toString() );
+            queue.add(utpTimestampedPacketDTO.utpPacket());
             utpTimestampedPacketDTO.incrementResendCounter();
             if (utpTimestampedPacketDTO.reduceWindow()) {
                 if (reduceWindowNecessary()) {
@@ -351,9 +349,9 @@ public class UtpAlgorithm {
      * @param utpPacket utp packet version
      * @param dgPacket  Datagram of first parameter.
      */
-    public void markPacketOnfly(UtpPacket utpPacket, DatagramPacket dgPacket) {
+    public void markPacketOnfly(UtpPacket utpPacket) {
         timeStampNow = timeStamper.timeStamp();
-        UtpTimestampedPacketDTO pkt = new UtpTimestampedPacketDTO(dgPacket, utpPacket, timeStampNow, 0);
+        UtpTimestampedPacketDTO pkt = new UtpTimestampedPacketDTO(utpPacket, timeStampNow, 0);
         buffer.bufferPacket(pkt);
         incrementAckNumber();
         addPacketToCurrentWindow(utpPacket);
@@ -376,8 +374,7 @@ public class UtpAlgorithm {
     public void markFinOnfly(UtpPacket fin) {
         timeStampNow = timeStamper.timeStamp();
         byte[] finBytes = fin.toByteArray();
-        DatagramPacket dgFin = new DatagramPacket(finBytes, finBytes.length);
-        UtpTimestampedPacketDTO pkt = new UtpTimestampedPacketDTO(dgFin, fin, timeStampNow, 0);
+        UtpTimestampedPacketDTO pkt = new UtpTimestampedPacketDTO(fin, timeStampNow, 0);
         buffer.bufferPacket(pkt);
         incrementAckNumber();
         addPacketToCurrentWindow(fin);

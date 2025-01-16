@@ -97,29 +97,29 @@ public class UtpAlgorithmTest {
 
         // Add some packets, 4...14
         UtpTimestampedPacketDTO pkt = createPacket(3);
-        algorithm.markPacketOnfly(pkt.utpPacket(), pkt.dataGram());
+        algorithm.markPacketOnfly(pkt.utpPacket());
         pkt = createPacket(4);
-        algorithm.markPacketOnfly(pkt.utpPacket(), pkt.dataGram());
+        algorithm.markPacketOnfly(pkt.utpPacket());
         pkt = createPacket(5);
-        algorithm.markPacketOnfly(pkt.utpPacket(), pkt.dataGram());
+        algorithm.markPacketOnfly(pkt.utpPacket());
         pkt = createPacket(6);
-        algorithm.markPacketOnfly(pkt.utpPacket(), pkt.dataGram());
+        algorithm.markPacketOnfly(pkt.utpPacket());
         pkt = createPacket(7);
-        algorithm.markPacketOnfly(pkt.utpPacket(), pkt.dataGram());
+        algorithm.markPacketOnfly(pkt.utpPacket());
         pkt = createPacket(8);
-        algorithm.markPacketOnfly(pkt.utpPacket(), pkt.dataGram());
+        algorithm.markPacketOnfly(pkt.utpPacket());
         pkt = createPacket(9);
-        algorithm.markPacketOnfly(pkt.utpPacket(), pkt.dataGram());
+        algorithm.markPacketOnfly(pkt.utpPacket());
         pkt = createPacket(10);
-        algorithm.markPacketOnfly(pkt.utpPacket(), pkt.dataGram());
+        algorithm.markPacketOnfly(pkt.utpPacket());
         pkt = createPacket(11);
-        algorithm.markPacketOnfly(pkt.utpPacket(), pkt.dataGram());
+        algorithm.markPacketOnfly(pkt.utpPacket());
         pkt = createPacket(12);
-        algorithm.markPacketOnfly(pkt.utpPacket(), pkt.dataGram());
+        algorithm.markPacketOnfly(pkt.utpPacket());
         pkt = createPacket(13);
-        algorithm.markPacketOnfly(pkt.utpPacket(), pkt.dataGram());
+        algorithm.markPacketOnfly(pkt.utpPacket());
         pkt = createPacket(14);
-        algorithm.markPacketOnfly(pkt.utpPacket(), pkt.dataGram());
+        algorithm.markPacketOnfly(pkt.utpPacket());
 
         // now 11 unacked packets: 3,...,13,14
         // ack with following: ACK:5, SACK: 7,8,9,10,11,12,13,14 -> should trigger resend 6
@@ -192,15 +192,15 @@ public class UtpAlgorithmTest {
         algorithm.setByteBuffer(bufferMock);
 
         UtpTimestampedPacketDTO pkt = createPacket(5);
-        algorithm.markPacketOnfly(pkt.utpPacket(), pkt.dataGram());
+        algorithm.markPacketOnfly(pkt.utpPacket());
         pkt = createPacket(6);
-        algorithm.markPacketOnfly(pkt.utpPacket(), pkt.dataGram());
+        algorithm.markPacketOnfly(pkt.utpPacket());
         pkt = createPacket(7);
-        algorithm.markPacketOnfly(pkt.utpPacket(), pkt.dataGram());
+        algorithm.markPacketOnfly(pkt.utpPacket());
         pkt = createPacket(8);
-        algorithm.markPacketOnfly(pkt.utpPacket(), pkt.dataGram());
+        algorithm.markPacketOnfly(pkt.utpPacket());
         pkt = createPacket(9);
-        algorithm.markPacketOnfly(pkt.utpPacket(), pkt.dataGram());
+        algorithm.markPacketOnfly(pkt.utpPacket());
 
         // packets 5,6,7,8,9 on fly
         // now will ACK:5, SACK: 7,8,9
@@ -240,11 +240,11 @@ public class UtpAlgorithmTest {
         UtpTimestampedPacketDTO pkt8 = createPacket(8, packetLength);
         UtpTimestampedPacketDTO pkt9 = createPacket(9, packetLength);
 
-        algorithm.markPacketOnfly(pkt5.utpPacket(), pkt5.dataGram());
-        algorithm.markPacketOnfly(pkt6.utpPacket(), pkt6.dataGram());
-        algorithm.markPacketOnfly(pkt7.utpPacket(), pkt7.dataGram());
-        algorithm.markPacketOnfly(pkt8.utpPacket(), pkt8.dataGram());
-        algorithm.markPacketOnfly(pkt9.utpPacket(), pkt9.dataGram());
+        algorithm.markPacketOnfly(pkt5.utpPacket());
+        algorithm.markPacketOnfly(pkt6.utpPacket());
+        algorithm.markPacketOnfly(pkt7.utpPacket());
+        algorithm.markPacketOnfly(pkt8.utpPacket());
+        algorithm.markPacketOnfly(pkt9.utpPacket());
 
         assertEquals(5 * (UtpPacketUtils.DEF_HEADER_LENGTH + packetLength), algorithm.getCurrentWindow());
 
@@ -353,10 +353,7 @@ public class UtpAlgorithmTest {
         UtpPacket pkt = new UtpPacket();
         pkt.setSequenceNumber(longToUshort(sequenceNumber));
         pkt.setPayload(new byte[packetLength]);
-        SocketAddress addr = new InetSocketAddress(111);
-        DatagramPacket mockDgPkt = new DatagramPacket(pkt.toByteArray(), 1, addr);
-
-        return new UtpTimestampedPacketDTO(mockDgPkt, pkt, 1L, 0);
+        return new UtpTimestampedPacketDTO(pkt, 1L, 0);
     }
 
 

@@ -1,19 +1,14 @@
 package utp;
 
 import org.apache.tuweni.bytes.Bytes;
+import utp.network.UDPTransportLayer;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.net.DatagramPacket;
-import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
-
-import static utp.data.UtpPacketUtils.MAX_UDP_HEADER_LENGTH;
-import static utp.data.UtpPacketUtils.MAX_UTP_PACKET_LENGTH;
 
 public class Test {
 

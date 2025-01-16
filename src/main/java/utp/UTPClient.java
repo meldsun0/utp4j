@@ -4,6 +4,7 @@ import utp.algo.UtpAlgConfiguration;
 import utp.data.MicroSecondsTimeStamp;
 import utp.data.SelectiveAckHeaderExtension;
 import utp.data.UtpPacket;
+import utp.network.TransportLayer;
 import utp.operations.UTPReadingFuture;
 import utp.operations.UTPWritingFuture;
 
@@ -73,13 +74,13 @@ public class UTPClient {
         return connection;
     }
 
-    public void receivePacket(DatagramPacket udpPacket) {
-        UtpPacket utpPacket = UTPWireMessageDecoder.decode(udpPacket);
+    public void receivePacket(UtpPacket utpPacket) {
+
         switch (utpPacket.getMessageType()) {
             case ST_RESET, ST_SYN -> this.stop();
-            case ST_DATA, ST_STATE -> queuePacket(utpPacket, udpPacket);
+            case ST_DATA, ST_STATE -> queuePacket(utpPacket);
             case ST_FIN -> handleFinPacket(utpPacket);
-            default -> sendResetPacket(udpPacket.getSocketAddress());
+            default -> sendResetPacket();
         }
     }
 
@@ -95,14 +96,14 @@ public class UTPClient {
 
     }
 
-    private void handleConfirmationOfConnection(UtpPacket utpPacket, SocketAddress socketAddress) {
+    private void handleConfirmationOfConnection(UtpPacket utpPacket) {
         if ((utpPacket.getConnectionId() & connectionIdMASK) == this.session.getConnectionIdReceiving()) {
             this.session.connectionConfirmed(utpPacket.getSequenceNumber());
             disableConnectionTimeOutCounter();
             connection.complete(null);
             this.session.printState();
         } else {
-            sendResetPacket(socketAddress);
+            sendResetPacket();
         }
     }
 
@@ -115,16 +116,16 @@ public class UTPClient {
         this.session.resetConnectionAttempts();
     }
 
-    private void queuePacket(UtpPacket utpPacket, DatagramPacket udpPacket) {
+    private void queuePacket(UtpPacket utpPacket) {
         if (utpPacket.getMessageType() == MessageType.ST_STATE && this.session.getState() == SessionState.SYN_SENT) {
-            handleConfirmationOfConnection(utpPacket, udpPacket.getSocketAddress());
+            handleConfirmationOfConnection(utpPacket);
             return;
         }
 
-        queue.offer(new UtpTimestampedPacketDTO(udpPacket, utpPacket, timeStamper.timeStamp(), timeStamper.utpTimeStamp()));
+        queue.offer(new UtpTimestampedPacketDTO(utpPacket, timeStamper.timeStamp(), timeStamper.utpTimeStamp()));
     }
 
-    private void sendResetPacket(SocketAddress addr) {
+    private void sendResetPacket() {
         //TODO
         LOG.debug("Sending RST packet MUST BE IMPLEMENTED");
 

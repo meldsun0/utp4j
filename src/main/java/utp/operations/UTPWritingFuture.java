@@ -12,7 +12,6 @@ import org.apache.logging.log4j.Logger;
 
 
 import java.io.IOException;
-import java.net.DatagramPacket;
 import java.nio.ByteBuffer;
 import java.util.Queue;
 import java.util.concurrent.BlockingQueue;
@@ -139,20 +138,7 @@ public class UTPWritingFuture {
         // Calculate remaining buffer size, capped at MAX_UINT
         int leftInBuffer = (int) Math.min(buffer.remaining(), UnsignedTypesUtil.MAX_UINT & 0xFFFFFFFF);
         utpPacket.setWindowSize(leftInBuffer);
-        // Convert UTP packet to bytes and prepare DatagramPacket
-        byte[] utpPacketBytes = utpPacket.toByteArray();
-
-        //TODO should be removed.
-        DatagramPacket udpPacket = new DatagramPacket(
-                utpPacketBytes,
-                utpPacketBytes.length,
-                utpClient.getRemoteAdress()
-        );
-        //TODO should be removed.
-
-        // Mark the packet as on the fly
-
-        algorithm.markPacketOnfly(utpPacket, udpPacket);
+        algorithm.markPacketOnfly(utpPacket);         // Mark the packet as on the fly
 
         return utpPacket;
     }

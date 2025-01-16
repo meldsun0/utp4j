@@ -127,9 +127,7 @@ public class OutPacketBufferTest {
         pkt.setPayload(new byte[PAYLOAD_LENGTH]);
         byte[] array = {(byte) 1};
         SocketAddress addr = new InetSocketAddress(111);
-        DatagramPacket mockDgPkt = new DatagramPacket(array, 1, addr);
-
-        return new UtpTimestampedPacketDTO(mockDgPkt, pkt, 1L, 0);
+        return new UtpTimestampedPacketDTO(pkt, 1L, 0);
     }
 
 }

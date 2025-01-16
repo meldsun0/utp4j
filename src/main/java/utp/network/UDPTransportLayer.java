@@ -1,7 +1,8 @@
-package utp;
+package utp.network;
 
 
 import utp.data.UtpPacket;
+import utp.message.UTPWireMessageDecoder;
 
 import java.io.IOException;
 import java.net.*;
@@ -14,7 +15,6 @@ public class UDPTransportLayer implements TransportLayer {
 
     protected DatagramSocket socket;
     private final Object sendLock = new Object();
-    private DatagramSocket clientSocket;
     private InetSocketAddress serverSocketAddress;
 
 
@@ -47,11 +47,11 @@ public class UDPTransportLayer implements TransportLayer {
     }
 
     @Override
-    public DatagramPacket onPacketReceive() throws IOException {
+    public UtpPacket onPacketReceive() throws IOException {
         byte[] buffer = new byte[MAX_UDP_HEADER_LENGTH + MAX_UTP_PACKET_LENGTH];
         DatagramPacket dgpkt = new DatagramPacket(buffer, buffer.length);
         this.socket.receive(dgpkt);
-        return dgpkt;
+        return UTPWireMessageDecoder.decode(dgpkt);
     }
 
     @Override

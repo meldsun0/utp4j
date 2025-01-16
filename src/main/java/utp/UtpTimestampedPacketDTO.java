@@ -16,6 +16,7 @@ package utp;
 
 import utp.data.UtpPacket;
 
+import java.io.IOException;
 import java.net.DatagramPacket;
 
 
@@ -26,7 +27,6 @@ import java.net.DatagramPacket;
  */
 public class UtpTimestampedPacketDTO {
 
-    private DatagramPacket packet;
     private Long timestamp;
     private final UtpPacket utpPacket;
     private final int utpTimeStamp;
@@ -45,20 +45,20 @@ public class UtpTimestampedPacketDTO {
         return resendCounter;
     }
 
-    public UtpTimestampedPacketDTO(DatagramPacket p, UtpPacket u, Long s, int utpStamp) {
+    public UtpTimestampedPacketDTO(UtpPacket u, Long s, int utpStamp) {
         this.timestamp = s;
         this.utpPacket = u;
-        this.packet = p;
         this.utpTimeStamp = utpStamp;
     }
 
     public DatagramPacket dataGram() {
-        return packet;
+        try {
+            return UtpPacket.createDatagramPacket(this.utpPacket);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
-    public void setDgPacket(DatagramPacket p) {
-        this.packet = p;
-    }
 
     public Long stamp() {
         return timestamp;

@@ -1,7 +1,8 @@
 package utp.examples;
 
-import utp.TransportLayer;
-import utp.UDPTransportLayer;
+import utp.data.UtpPacket;
+import utp.network.TransportLayer;
+import utp.network.UDPTransportLayer;
 import utp.UTPClient;
 
 import java.io.File;
@@ -33,7 +34,7 @@ public class GetContent {
         System.out.println("writing test done");
         chanel.stop();
 
-        saveAnswerOnFile(buffer, "hi");
+        saveAnswerOnFile(buffer, "getContent");
 
 
     }
@@ -42,10 +43,8 @@ public class GetContent {
         CompletableFuture.runAsync(() -> {
             while(true){
             if(utpClient.isAlive()) {
-                DatagramPacket dgpkt = null;
                 try {
-                    dgpkt = transportLayer.onPacketReceive();
-                    utpClient.receivePacket(dgpkt);
+                    utpClient.receivePacket(transportLayer.onPacketReceive());
                 } catch (IOException e) {
                     throw new RuntimeException(e);
                 }

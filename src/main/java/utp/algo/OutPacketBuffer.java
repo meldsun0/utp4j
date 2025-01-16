@@ -211,8 +211,6 @@ public class OutPacketBuffer {
         // 		 ukackedPacket.datagram.getData()[x + 1] = newtimestamp[1]
         // 		 ukackedPacket.datagram.getData()[x + 2] = newtimestamp[2]
         // 		 ukackedPacket.datagram.getData()[x + 3] = newtimestamp[3]
-        unackedPkt.setDgPacket(new DatagramPacket(newBytes, newBytes.length,
-                addr));
         unackedPkt.setStamp(currentTime);
     }
 
