@@ -46,9 +46,9 @@ public class UTPManager {
     public void onPacketReceive(DatagramPacket udp ){
         UtpPacket utpPacket = UtpPacket.decode(udp);
         UTPClient client = connections.get(utpPacket.getConnectionId() & 0xFFFF);
-        if (client != null) {
-            client.recievePacket(udp);
-        }
+//        if (client != null) {
+//            client.recievePacket(udp);
+//        }
     }
 
 }

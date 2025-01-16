@@ -61,8 +61,8 @@ public class UTPClient {
         try {
             connection = new CompletableFuture<>();
             this.session.initConnection(this.transportLayer.getRemoteAddress(), connectionId);
-            this.startListeningIncomingPackets();
             UtpPacket message = InitConnectionMessage.build(timeStamper.utpTimeStamp(), connectionId);
+          //  startListeningIncomingPackets(this.transportLayer, this);
             sendPacket(message);
             this.session.updateStateOnConnectionInitSuccess();
 
@@ -74,7 +74,7 @@ public class UTPClient {
         return connection;
     }
 
-    public void recievePacket(DatagramPacket udpPacket) {
+    public void receivePacket(DatagramPacket udpPacket) {
         UtpPacket utpPacket = UTPWireMessageDecoder.decode(udpPacket);
 
         if (utpPacket.getMessageType() == MessageType.ST_STATE && this.session.getState() == SessionState.SYN_SENT) {
@@ -230,20 +230,6 @@ public class UTPClient {
         }
     }
 
-    private void startListeningIncomingPackets() {
-        CompletableFuture.runAsync(() -> {
-            while (listen.get()) {
-                DatagramPacket dgpkt = null;
-                try {
-                    dgpkt = this.transportLayer.onPacketReceive();
-                    this.recievePacket(dgpkt);
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
-            }
-        });
-    }
-
     //refactor
 
     public long getConnectionIdRecievingIncoming() {
@@ -273,6 +259,11 @@ public class UTPClient {
     public void setTransportAddress(InetSocketAddress localhost) {
         this.session.setTransportAddress(localhost);
     }
+
+    public boolean isAlive() {
+        return this.listen.get();
+    }
+
 
     //for testing must be removed.
     public void setState(SessionState sessionState) {
