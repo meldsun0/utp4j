@@ -48,7 +48,7 @@ public class UTPClient {
 
     public UTPClient(final TransportLayer transportLayer) {
         this.session = new Session();
-        this.transportLayer =  transportLayer;
+        this.transportLayer = transportLayer;
     }
 
     public CompletableFuture<Void> connect(int connectionId) {
@@ -181,14 +181,9 @@ public class UTPClient {
                 this.session.getConnectionIdSending(), this.getAckNumber(), NO_EXTENSION);
     }
 
-    public void sendPacket(DatagramPacket pkt) throws IOException {
-            this.transportLayer.sendPacket(pkt);
-    }
-
     public void sendPacket(UtpPacket packet) throws IOException {
-        sendPacket(UtpPacket.createDatagramPacket(packet));
+       this.transportLayer.sendPacket(packet);
     }
-
 
     public void returnFromReading() {
         //TODO: dispatch:
@@ -221,7 +216,7 @@ public class UTPClient {
         }
         try {
             this.session.incrementeConnectionAttempts();
-            sendPacket(UtpPacket.createDatagramPacket(synPacket));
+            this.transportLayer.sendPacket(synPacket);
         } catch (IOException e) {
             this.connection.completeExceptionally(new SocketTimeoutException());
             retryConnectionTimeScheduler.shutdown();

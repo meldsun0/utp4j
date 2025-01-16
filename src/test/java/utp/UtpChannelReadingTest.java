@@ -82,7 +82,7 @@ public class UtpChannelReadingTest {
          * argument captor on socket, which will record all invocations of socket.send(packet)
          * and capture the arguments, in this case the arguments are ack packets.
          */
-        ArgumentCaptor<DatagramPacket> ackOne = ArgumentCaptor.forClass(DatagramPacket.class);
+        ArgumentCaptor<UtpPacket> ackOne = ArgumentCaptor.forClass(UtpPacket.class);
 
         try {
             // order of recieving the data packets -> 3,4,6,8,5, 7
@@ -102,16 +102,16 @@ public class UtpChannelReadingTest {
 
             // verify 6 ack packets where send and capture them
             verify(udpTransportLayer, times(6)).sendPacket(ackOne.capture());
-            List<DatagramPacket> allValues = ackOne.getAllValues();
-            Iterator<DatagramPacket> iterator = allValues.iterator();
+            List<UtpPacket> allValues = ackOne.getAllValues();
+            Iterator<UtpPacket> iterator = allValues.iterator();
 
             // extract utp packets from the udp packets.
-            UtpPacket three = UtpPacket.decode(iterator.next());
-            UtpPacket four = UtpPacket.decode(iterator.next());
-            UtpPacket six = UtpPacket.decode(iterator.next());
-            UtpPacket eight = UtpPacket.decode(iterator.next());
-            UtpPacket five = UtpPacket.decode(iterator.next());
-            UtpPacket seven = UtpPacket.decode(iterator.next());
+            UtpPacket three = iterator.next();
+            UtpPacket four = iterator.next();
+            UtpPacket six = iterator.next();
+            UtpPacket eight = iterator.next();
+            UtpPacket five = iterator.next();
+            UtpPacket seven = iterator.next();
 
 
             // first two packets were acked normally

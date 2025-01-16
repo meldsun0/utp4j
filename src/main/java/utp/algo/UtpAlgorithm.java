@@ -235,12 +235,15 @@ public class UtpAlgorithm {
      *
      * @return All packets that must be resend
      */
-    public Queue<DatagramPacket> getPacketsToResend() throws SocketException {
+    public Queue<UtpPacket> getPacketsToResend() throws SocketException {
         timeStampNow = timeStamper.timeStamp();
-        Queue<DatagramPacket> queue = new LinkedList<DatagramPacket>();
+        Queue<UtpPacket> queue = new LinkedList<>();
+
         Queue<UtpTimestampedPacketDTO> toResend = buffer.getPacketsToResend(UtpAlgConfiguration.MAX_BURST_SEND);
+
         for (UtpTimestampedPacketDTO utpTimestampedPacketDTO : toResend) {
-            queue.add(utpTimestampedPacketDTO.dataGram());
+            queue.add(UtpPacket.decode(utpTimestampedPacketDTO.dataGram()));
+
 //			log.debug("Resending: " + utpTimestampedPacketDTO.utpPacket().toString() );
             utpTimestampedPacketDTO.incrementResendCounter();
             if (utpTimestampedPacketDTO.reduceWindow()) {

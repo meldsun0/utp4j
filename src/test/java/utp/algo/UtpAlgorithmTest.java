@@ -136,9 +136,9 @@ public class UtpAlgorithmTest {
         assertEquals("6 7 8 9 10 11 12 13 14", leftElements);
 
         // 3 past 6 are acked, trigger an resend of 6
-        Queue<DatagramPacket> packetsToResend = algorithm.getPacketsToResend();
+        Queue<UtpPacket> packetsToResend = algorithm.getPacketsToResend();
         assertEquals(1, packetsToResend.size());
-        assertEquals(6, (UtpPacket.decode(packetsToResend.remove()).getSequenceNumber() & 0xFFFF));
+        assertEquals(6, (packetsToResend.remove()).getSequenceNumber() & 0xFFFF);
 
         // 6 beeing acked now.
         UtpTimestampedPacketDTO ack6 = createSelAckPacket(6, null);
@@ -213,7 +213,7 @@ public class UtpAlgorithmTest {
         algorithm.ackRecieved(sack);
         algorithm.setMaxWindow(maxWindow);
 
-        Queue<DatagramPacket> queue = algorithm.getPacketsToResend();
+        Queue<UtpPacket> queue = algorithm.getPacketsToResend();
         assertEquals(1, queue.size());
 
         assertEquals(maxWindow, algorithm.getMaxWindow());

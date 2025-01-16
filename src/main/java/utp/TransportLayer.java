@@ -7,9 +7,7 @@ import java.net.DatagramPacket;
 import java.net.SocketAddress;
 
 public interface TransportLayer {
-
-    void sendPacket(DatagramPacket packet) throws IOException;
-
+    
     void sendPacket(UtpPacket packet) throws IOException;
 
     DatagramPacket onPacketReceive() throws  IOException;

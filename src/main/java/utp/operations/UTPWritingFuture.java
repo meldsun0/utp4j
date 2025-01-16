@@ -97,17 +97,22 @@ public class UTPWritingFuture {
     private void sendNextPackets() throws IOException {
         while (algorithm.canSendNextPacket() && buffer.hasRemaining()) {
             UtpPacket utpPacket  = utpClient.buildDataPacket();
-            DatagramPacket nextPacket = buildNextPacket(utpPacket);
-            utpClient.sendPacket(nextPacket);
+            this.buildNextPacket(utpPacket);
+            utpClient.sendPacket(utpPacket);
         }
     }
 
     private void resendPendingPackets() throws IOException {
-        Queue<DatagramPacket> packetsToResend = algorithm.getPacketsToResend();
-        for (DatagramPacket packet : packetsToResend) {
-            packet.setSocketAddress(utpClient.getRemoteAdress());
-            utpClient.sendPacket(packet);
-        }
+        Queue<UtpPacket> packetsToResend = algorithm.getPacketsToResend();
+        packetsToResend.forEach(packet->{
+            try {
+                utpClient.sendPacket(packet);
+
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        });
+
     }
 
     private boolean processAcknowledgements() {
@@ -126,7 +131,7 @@ public class UTPWritingFuture {
         }
     }
 
-    private DatagramPacket buildNextPacket(UtpPacket utpPacket) {
+    private UtpPacket buildNextPacket(UtpPacket utpPacket) {
         int packetSize = Math.min(algorithm.sizeOfNextPacket(), buffer.remaining());
         byte[] payload = new byte[packetSize];
         buffer.get(payload);
@@ -136,14 +141,20 @@ public class UTPWritingFuture {
         utpPacket.setWindowSize(leftInBuffer);
         // Convert UTP packet to bytes and prepare DatagramPacket
         byte[] utpPacketBytes = utpPacket.toByteArray();
+
+        //TODO should be removed.
         DatagramPacket udpPacket = new DatagramPacket(
                 utpPacketBytes,
                 utpPacketBytes.length,
                 utpClient.getRemoteAdress()
         );
+        //TODO should be removed.
+
         // Mark the packet as on the fly
+
         algorithm.markPacketOnfly(utpPacket, udpPacket);
-        return udpPacket;
+
+        return utpPacket;
     }
 
     private boolean continueSending() {

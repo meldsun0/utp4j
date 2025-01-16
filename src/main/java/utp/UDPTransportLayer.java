@@ -37,17 +37,13 @@ public class UDPTransportLayer implements TransportLayer {
 
 
     @Override
-    public void sendPacket(DatagramPacket packet) throws IOException {
+    public void sendPacket(UtpPacket UTPPacket) throws IOException {
         synchronized (sendLock) {
-            packet.setAddress(serverSocketAddress.getAddress());
-            packet.setPort(serverSocketAddress.getPort());
-            this.socket.send(packet);
+            DatagramPacket UDPPacket = UtpPacket.createDatagramPacket(UTPPacket);
+            UDPPacket.setAddress(serverSocketAddress.getAddress());
+            UDPPacket.setPort(serverSocketAddress.getPort());
+            this.socket.send(UDPPacket);
         }
-    }
-
-    @Override
-    public void sendPacket(UtpPacket packet) throws IOException {
-        sendPacket(UtpPacket.createDatagramPacket(packet));
     }
 
     @Override
