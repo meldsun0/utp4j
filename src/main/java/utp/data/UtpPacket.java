@@ -327,10 +327,10 @@ public class UtpPacket {
     }
 
 
-    public static DatagramPacket createDatagramPacket(UtpPacket packet, SocketAddress socketAddress) throws IOException {
+    public static DatagramPacket createDatagramPacket(UtpPacket packet) throws IOException {
         byte[] utpPacketBytes = packet.toByteArray();
         int length = packet.getPacketLength();
-        return new DatagramPacket(utpPacketBytes, length, socketAddress);
+        return new DatagramPacket(utpPacketBytes, length);
     }
 
     @Override

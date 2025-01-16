@@ -86,12 +86,12 @@ public class UtpChannelReadingTest {
 
         try {
             // order of recieving the data packets -> 3,4,6,8,5, 7
-            channel.recievePacket(createPacket(3)); // ack 3
-            channel.recievePacket(createPacket(4)); // ack 4
-            channel.recievePacket(createPacket(6)); // ack 4, Sack 6 -> 00000001
-            channel.recievePacket(createPacket(8)); // ack 4, Sack 6, 8 -> 00000101
-            channel.recievePacket(createPacket(5)); // ack 6, sack 8 -> 00000001
-            channel.recievePacket(createPacket(7)); // ack 8
+            channel.receivePacket(createPacket(3)); // ack 3
+            channel.receivePacket(createPacket(4)); // ack 4
+            channel.receivePacket(createPacket(6)); // ack 4, Sack 6 -> 00000001
+            channel.receivePacket(createPacket(8)); // ack 4, Sack 6, 8 -> 00000101
+            channel.receivePacket(createPacket(5)); // ack 6, sack 8 -> 00000001
+            channel.receivePacket(createPacket(7)); // ack 8
 
             // allocating reading buffer and start test.
             ByteBuffer buffer = ByteBuffer.allocate(30000);

@@ -62,7 +62,6 @@ public class UTPClient {
             connection = new CompletableFuture<>();
             this.session.initConnection(this.transportLayer.getRemoteAddress(), connectionId);
             UtpPacket message = InitConnectionMessage.build(timeStamper.utpTimeStamp(), connectionId);
-          //  startListeningIncomingPackets(this.transportLayer, this);
             sendPacket(message);
             this.session.updateStateOnConnectionInitSuccess();
 
@@ -76,11 +75,6 @@ public class UTPClient {
 
     public void receivePacket(DatagramPacket udpPacket) {
         UtpPacket utpPacket = UTPWireMessageDecoder.decode(udpPacket);
-
-        if (utpPacket.getMessageType() == MessageType.ST_STATE && this.session.getState() == SessionState.SYN_SENT) {
-            handleConfirmationOfConnection(utpPacket, udpPacket.getSocketAddress());
-            return;
-        }
         switch (utpPacket.getMessageType()) {
             case ST_RESET, ST_SYN -> this.stop();
             case ST_DATA, ST_STATE -> queuePacket(utpPacket, udpPacket);
@@ -122,6 +116,11 @@ public class UTPClient {
     }
 
     private void queuePacket(UtpPacket utpPacket, DatagramPacket udpPacket) {
+        if (utpPacket.getMessageType() == MessageType.ST_STATE && this.session.getState() == SessionState.SYN_SENT) {
+            handleConfirmationOfConnection(utpPacket, udpPacket.getSocketAddress());
+            return;
+        }
+
         queue.offer(new UtpTimestampedPacketDTO(udpPacket, utpPacket, timeStamper.timeStamp(), timeStamper.utpTimeStamp()));
     }
 
@@ -187,7 +186,7 @@ public class UTPClient {
     }
 
     public void sendPacket(UtpPacket packet) throws IOException {
-        sendPacket(UtpPacket.createDatagramPacket(packet, this.session.getTransportAddress()));
+        sendPacket(UtpPacket.createDatagramPacket(packet));
     }
 
 
@@ -222,7 +221,7 @@ public class UTPClient {
         }
         try {
             this.session.incrementeConnectionAttempts();
-            sendPacket(UtpPacket.createDatagramPacket(synPacket, this.session.getTransportAddress()));
+            sendPacket(UtpPacket.createDatagramPacket(synPacket));
         } catch (IOException e) {
             this.connection.completeExceptionally(new SocketTimeoutException());
             retryConnectionTimeScheduler.shutdown();

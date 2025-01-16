@@ -47,7 +47,7 @@ public class UDPTransportLayer implements TransportLayer {
 
     @Override
     public void sendPacket(UtpPacket packet) throws IOException {
-        sendPacket(UtpPacket.createDatagramPacket(packet, socket.getRemoteSocketAddress()));
+        sendPacket(UtpPacket.createDatagramPacket(packet));
     }
 
     @Override
