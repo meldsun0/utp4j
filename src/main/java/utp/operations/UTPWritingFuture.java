@@ -86,11 +86,10 @@ public class UTPWritingFuture {
         LOG.debug("Transmission complete.");
         if (successful) {
             writerFuture.complete(null);
-            utpClient.stop();
         } else {
             writerFuture.completeExceptionally(new RuntimeException("Something went wrong!"));
-            utpClient.stop();
         }
+        utpClient.stop();
     }
 
     private void sendNextPackets() throws IOException {

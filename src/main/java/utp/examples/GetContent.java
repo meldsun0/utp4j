@@ -29,7 +29,7 @@ public class GetContent {
                 .thenCompose(v -> chanel.read(buffer))
                 .thenRun(() -> {
                     saveAnswerOnFile(buffer, "content");
-                }).thenRun(chanel::stop).get();
+                }).get();
     }
 
     public static void startListeningIncomingPackets(TransportLayer transportLayer, UTPClient utpClient) {

@@ -60,7 +60,6 @@ public class UTPReadingFuture {
     public CompletableFuture<Void> startReading() {
         CompletableFuture.runAsync(() -> {
             boolean successful = false;
-            IOException exception = null;
             try {
                 while (continueReading()) {
                     BlockingQueue<UtpTimestampedPacketDTO> queue = UTPClient.getQueue();
@@ -92,8 +91,6 @@ public class UTPReadingFuture {
                             gotLastPacket = true;
                             LOG.info("Ending reading, no more incoming data");
                         } else {
-                            //LOG.debug("now: " + nowtimeStamp + " last: " + lastPackedRecieved + " = " + (nowtimeStamp - lastPackedRecieved));
-                            //LOG.debug("now: " + nowtimeStamp + " start: " + startReadingTimeStamp + " = " + (nowtimeStamp - startReadingTimeStamp));
                             throw new IOException("Timeout occurred with skipped packets.");
                         }
                     }
@@ -102,7 +99,6 @@ public class UTPReadingFuture {
             } catch (IOException | InterruptedException | ArrayIndexOutOfBoundsException e) {
                 LOG.debug("Something went wrong during packet processing!");
             } finally {
-                UTPClient.returnFromReading();
                 if (successful) {
                     readFuture.complete(null);
                 } else {
@@ -226,7 +222,6 @@ public class UTPReadingFuture {
 
     public boolean isPacketExpected(UtpPacket utpPacket) {
         int seqNumberFromPacket = utpPacket.getSequenceNumber() & 0xFFFF;
-//		log.debug("Expected Sequence Number == " + getExpectedSeqNr());
         return getExpectedSeqNr() == seqNumberFromPacket;
     }
 

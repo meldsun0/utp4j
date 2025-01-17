@@ -27,14 +27,6 @@ public class Offer {
                     } catch (IOException e) {
                         throw new RuntimeException(e);
                     }
-                })
-                .whenComplete((result, exception) -> {
-                    if (exception == null) {
-                        System.out.println("writing test done");
-                        chanel.stop();
-                    } else {
-                        System.out.println("Completed with error: " + exception.getMessage());
-                    }
                 }).get();
 
     }

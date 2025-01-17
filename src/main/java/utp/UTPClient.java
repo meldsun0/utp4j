@@ -51,6 +51,7 @@ public class UTPClient {
     public UTPClient(final TransportLayer transportLayer) {
         this.session = new Session();
         this.transportLayer = transportLayer;
+        this.connection = new CompletableFuture<>();
     }
 
     public CompletableFuture<Void> connect(int connectionId) {
@@ -61,7 +62,6 @@ public class UTPClient {
             CompletableFuture.failedFuture(new IllegalStateException("Attempted to start an already started server listening on " + connectionId));
         }
         try {
-            connection = new CompletableFuture<>();
             this.session.initConnection(this.transportLayer.getRemoteAddress(), connectionId);
             UtpPacket message = InitConnectionMessage.build(timeStamper.utpTimeStamp(), connectionId);
             sendPacket(message);
@@ -155,6 +155,7 @@ public class UTPClient {
             return;
         }
         this.session.close();
+        this.transportLayer.close();
         this.reader.ifPresent(UTPReadingFuture::graceFullInterrupt);
         this.writer.ifPresent(UTPWritingFuture::graceFullInterrupt);
     }
@@ -188,12 +189,6 @@ public class UTPClient {
        this.transportLayer.sendPacket(packet);
     }
 
-    public void returnFromReading() {
-        //TODO: dispatch:
-        this.writer.ifPresent(writer -> {
-            if (writer.isAlive()) this.session.changeState(SessionState.CONNECTED);
-        });
-    }
 
     protected void startConnectionTimeOutCounter(UtpPacket synPacket) {
         retryConnectionTimeScheduler = Executors.newSingleThreadScheduledExecutor();
@@ -225,16 +220,6 @@ public class UTPClient {
             retryConnectionTimeScheduler.shutdown();
             stop();
         }
-    }
-
-    //refactor
-
-    public long getConnectionIdRecievingIncoming() {
-        return this.session.getConnectionIdReceiving();
-    }
-
-    public SessionState getState() {
-        return this.session.getState();
     }
 
     public SocketAddress getRemoteAdress() {

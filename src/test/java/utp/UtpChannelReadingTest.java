@@ -33,6 +33,7 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 import static utp.data.bytes.BinaryToStringTestHelper.toBinaryString;
 import static utp.data.bytes.UnsignedTypesUtil.longToUbyte;
@@ -72,6 +73,16 @@ public class UtpChannelReadingTest {
                         .get(0);
         field2.setAccessible(true);
         field2.set(channel , stamp);
+
+
+        Field field3 =
+                ReflectionUtils.findFields(
+                                UTPClient.class,
+                                f -> f.getName().equals("connection"),
+                                ReflectionUtils.HierarchyTraversalMode.TOP_DOWN)
+                        .get(0);
+        field3.setAccessible(true);
+        field3.set(channel , CompletableFuture.completedFuture(null));
 
 
         channel.setTransportAddress(new InetSocketAddress("localhost", 12345));
