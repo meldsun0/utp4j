@@ -20,6 +20,7 @@ import java.nio.ByteBuffer;
 import java.util.Optional;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.BiConsumer;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -65,7 +66,6 @@ public class UTPClient {
             UtpPacket message = InitConnectionMessage.build(timeStamper.utpTimeStamp(), connectionId);
             sendPacket(message);
             this.session.updateStateOnConnectionInitSuccess();
-
             startConnectionTimeOutCounter(message);
             this.session.printState();
         } catch (IOException exp) {
@@ -132,15 +132,17 @@ public class UTPClient {
     }
 
     public CompletableFuture<Void> write(ByteBuffer buffer) {
-        //TODO handle case when connection is not done yet.
-        this.writer = Optional.of(new UTPWritingFuture(this, buffer, timeStamper));
-        return writer.get().startWriting();
+        return this.connection.thenCompose(v -> {
+            this.writer = Optional.of(new UTPWritingFuture(this, buffer, timeStamper));
+            return writer.get().startWriting();
+        });
     }
 
     public CompletableFuture<Void> read(ByteBuffer dst) {
-        //TODO handle case when connection is not done yet.
-        this.reader = Optional.of(new UTPReadingFuture(this, dst, timeStamper));
-        return reader.get().startReading();
+        return this.connection.thenCompose(v -> {
+            this.reader = Optional.of(new UTPReadingFuture(this, dst, timeStamper));
+            return reader.get().startReading();
+        });
     }
 
     public BlockingQueue<UtpTimestampedPacketDTO> getQueue() {

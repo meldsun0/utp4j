@@ -17,38 +17,32 @@ import java.util.concurrent.ExecutionException;
 public class GetContent {
 
 
-    public static void main(String[] args) throws IOException, ExecutionException, InterruptedException {
+    public static void main(String[] args) throws ExecutionException, InterruptedException {
 
         UDPTransportLayer udpTransportLayer = new UDPTransportLayer("localhost", 13345);
 
         UTPClient chanel = new UTPClient(udpTransportLayer);
         startListeningIncomingPackets(udpTransportLayer, chanel);
-
-        CompletableFuture<Void> cFuture = chanel.connect(333);
-        cFuture.get();
-
-
         ByteBuffer buffer = ByteBuffer.allocate(10);
-        CompletableFuture<Void> fut = chanel.read(buffer);
-        fut.get();
-        System.out.println("writing test done");
-        chanel.stop();
 
-        saveAnswerOnFile(buffer, "getContent");
-
-
+        chanel.connect(333)
+                .thenCompose(v -> chanel.read(buffer))
+                .thenRun(() -> {
+                    saveAnswerOnFile(buffer, "content");
+                }).thenRun(chanel::stop).get();
     }
 
     public static void startListeningIncomingPackets(TransportLayer transportLayer, UTPClient utpClient) {
         CompletableFuture.runAsync(() -> {
-            while(true){
-            if(utpClient.isAlive()) {
-                try {
-                    utpClient.receivePacket(transportLayer.onPacketReceive());
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
+            while (true) {
+                if (utpClient.isAlive()) {
+                    try {
+                        utpClient.receivePacket(transportLayer.onPacketReceive());
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
                 }
-            }}
+            }
         });
     }
 

@@ -20,14 +20,22 @@ public class Offer {
         UTPClient chanel = new UTPClient(udpTransportLayer);
         startListeningIncomingPackets(udpTransportLayer, chanel);
 
-        CompletableFuture<Void> cFuture = chanel.connect(333);
-        cFuture.get();
-
-
-        CompletableFuture<Void> fut =  chanel.write(getFileToSend() );
-        fut.get();
-        chanel.stop();
-
+        chanel.connect(333)
+                .thenCompose(v -> {
+                    try {
+                        return chanel.write(getFileToSend());
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+                })
+                .whenComplete((result, exception) -> {
+                    if (exception == null) {
+                        System.out.println("writing test done");
+                        chanel.stop();
+                    } else {
+                        System.out.println("Completed with error: " + exception.getMessage());
+                    }
+                }).get();
 
     }
 
