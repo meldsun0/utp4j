@@ -139,9 +139,9 @@ public class UTPClient {
         });
     }
 
-    public CompletableFuture<Void> read(ByteBuffer dst) {
+    public CompletableFuture<ByteBuffer> read() {
         return this.connection.thenCompose(v -> {
-            this.reader = Optional.of(new UTPReadingFuture(this, dst, timeStamper));
+            this.reader = Optional.of(new UTPReadingFuture(this, timeStamper));
             return reader.get().startReading();
         });
     }

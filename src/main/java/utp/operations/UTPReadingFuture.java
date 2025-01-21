@@ -10,6 +10,7 @@ import utp.data.bytes.UnsignedTypesUtil;
 import org.apache.logging.log4j.Logger;
 
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Queue;
@@ -28,10 +29,10 @@ public class UTPReadingFuture {
     private static final int PACKET_DIFF_WARP = 50000;
     private int lastPayloadLength = UtpAlgConfiguration.MAX_PACKET_SIZE;;
 
-    private final ByteBuffer buffer;
+    private final ByteArrayOutputStream buffer;
 
     private final SkippedPacketBuffer skippedBuffer = new SkippedPacketBuffer();
-    private boolean graceFullInterrupt;
+    private volatile boolean graceFullInterrupt;
     private MicroSecondsTimeStamp timeStamper;
     private long totalPayloadLength = 0;
     private long lastPacketTimestamp;
@@ -46,18 +47,18 @@ public class UTPReadingFuture {
 
     private static final Logger LOG = LogManager.getLogger(UTPReadingFuture.class);
     private final UTPClient UTPClient;
-    private final CompletableFuture<Void> readFuture;
+    private final CompletableFuture<ByteBuffer> readFuture;
 
-    public UTPReadingFuture(UTPClient UTPClient, ByteBuffer buff, MicroSecondsTimeStamp timestamp) {
+    public UTPReadingFuture(UTPClient UTPClient, MicroSecondsTimeStamp timestamp) {
         this.UTPClient = UTPClient;
-        this.buffer = buff;
+        this.buffer = new ByteArrayOutputStream();
         this.timeStamper = timestamp;
         this.startReadingTimeStamp = timestamp.timeStamp();
-        this.readFuture = new CompletableFuture<>();
+        this.readFuture = new CompletableFuture<ByteBuffer>();
     }
 
 
-    public CompletableFuture<Void> startReading() {
+    public CompletableFuture<ByteBuffer> startReading() {
         CompletableFuture.runAsync(() -> {
             boolean successful = false;
             try {
@@ -100,13 +101,11 @@ public class UTPReadingFuture {
                 LOG.debug("Something went wrong during packet processing!");
             } finally {
                 if (successful) {
-                    readFuture.complete(null);
+                    readFuture.complete(ByteBuffer.wrap(this.buffer.toByteArray()));
                 } else {
                     readFuture.completeExceptionally(new RuntimeException("Something went wrong!"));
                 }
-                LOG.info("Buffer position: {}, Buffer limit: {}", buffer.position(), buffer.limit());
                 LOG.info("Total payload length: {}", totalPayloadLength);
-                LOG.debug("Reader stopped.");
                 UTPClient.stop();
             }
         });
@@ -133,7 +132,7 @@ public class UTPReadingFuture {
     private void handleExpectedPacket(UtpTimestampedPacketDTO timestampedPair) throws IOException {
 //		log.debug("handling expected packet: " + (timestampedPair.utpPacket().getSequenceNumber() & 0xFFFF));
         if (hasSkippedPackets()) {
-            buffer.put(timestampedPair.utpPacket().getPayload());
+            buffer.write(timestampedPair.utpPacket().getPayload());
             int payloadLength = timestampedPair.utpPacket().getPayload().length;
             lastPayloadLength = payloadLength;
             totalPayloadLength += payloadLength;
@@ -144,7 +143,7 @@ public class UTPReadingFuture {
             }
             UtpPacket lastPacket = null;
             for (UtpTimestampedPacketDTO p : packets) {
-                buffer.put(p.utpPacket().getPayload());
+                buffer.write(p.utpPacket().getPayload());
                 payloadLength += p.utpPacket().getPayload().length;
                 lastSeqNumber = p.utpPacket().getSequenceNumber() & 0xFFFF;
                 lastPacket = p.utpPacket();
@@ -173,7 +172,7 @@ public class UTPReadingFuture {
             } else {
                 UTPClient.setAckNumber(timestampedPair.utpPacket().getSequenceNumber() & 0xFFFF);
             }
-            buffer.put(timestampedPair.utpPacket().getPayload());
+            buffer.write(timestampedPair.utpPacket().getPayload());
             totalPayloadLength += timestampedPair.utpPacket().getPayload().length;
         }
     }
@@ -243,7 +242,7 @@ public class UTPReadingFuture {
 
     //done
     private boolean continueReading() {
-        return !graceFullInterrupt && (!gotLastPacket || hasSkippedPackets() || !timeAwaitedAfterLastPacket());
+         return !graceFullInterrupt && (!gotLastPacket || hasSkippedPackets() || !timeAwaitedAfterLastPacket());
     }
 
     private boolean hasSkippedPackets() {

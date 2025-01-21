@@ -22,15 +22,13 @@ public class GetContent {
 
         UTPClient chanel = new UTPClient(udpTransportLayer);
         startListeningIncomingPackets(udpTransportLayer, chanel);
-        ByteBuffer buffer = ByteBuffer.allocate(10);
 
         chanel.connect(333)
-                .thenCompose(v -> chanel.read(buffer))
-                .thenRun(() -> {
-                    System.out.println("******");
-                    buffer.flip();
-                    System.out.println(StandardCharsets.UTF_8.decode(buffer));
-                    saveAnswerOnFile(buffer, "content");
+                .thenCompose(v -> chanel.read())
+                .thenApply((data) -> {
+                    System.out.println(StandardCharsets.UTF_8.decode(data));
+                    saveAnswerOnFile(data, "content");
+                    return CompletableFuture.completedFuture(data);
                 }).get();
     }
 

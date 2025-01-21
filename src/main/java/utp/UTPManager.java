@@ -20,10 +20,7 @@ public class UTPManager {
     public CompletableFuture<ByteBuffer> getContent(int connectionId, Bytes nodeRecord,  final TransportLayer transportLayer) {
         UTPClient utpClient = this.registerClient(connectionId, transportLayer);
         return utpClient.connect(connectionId)
-                .thenCompose(result -> {
-                    ByteBuffer buffer = ByteBuffer.allocate(150000000);
-                    return utpClient.read(buffer).thenApply(readResult -> buffer);
-                })
+                .thenCompose(result -> utpClient.read())
                 .exceptionally(error -> {
                     throw new RuntimeException("Operation failed", error);
                 });
