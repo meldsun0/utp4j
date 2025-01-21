@@ -53,7 +53,6 @@ public class OutPacketBuffer {
     }
 
     private final MicroSecondsTimeStamp timeStamper;
-    private SocketAddress addr;
     private long currentTime;
 
     public OutPacketBuffer(MicroSecondsTimeStamp stamper) {
@@ -284,11 +283,7 @@ public class OutPacketBuffer {
         }
         return -1;
     }
-
-    public void setRemoteAdress(SocketAddress addr) {
-        this.addr = addr;
-
-    }
+    
 
     /**
      * @param seqNrToAck packet with that sequence number.

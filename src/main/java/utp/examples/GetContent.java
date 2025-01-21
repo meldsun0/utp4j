@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
@@ -28,6 +29,9 @@ public class GetContent {
         chanel.connect(333)
                 .thenCompose(v -> chanel.read(buffer))
                 .thenRun(() -> {
+                    System.out.println("******");
+                    buffer.flip();
+                    System.out.println(StandardCharsets.UTF_8.decode(buffer));
                     saveAnswerOnFile(buffer, "content");
                 }).get();
     }

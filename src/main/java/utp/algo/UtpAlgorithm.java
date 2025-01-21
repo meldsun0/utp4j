@@ -31,9 +31,6 @@ import static utp.algo.UtpAlgConfiguration.*;
 
 public class UtpAlgorithm {
 
-    /**
-     * Variables
-     */
     private int currentWindow = 0;
     private int maxWindow;
     private MinimumDelay minDelay = new MinimumDelay();
@@ -62,12 +59,11 @@ public class UtpAlgorithm {
     private final static Logger log = LoggerFactory.getLogger(UtpAlgorithm.class);
 
 
-    public UtpAlgorithm(MicroSecondsTimeStamp timestamper, SocketAddress addr) {
+    public UtpAlgorithm(MicroSecondsTimeStamp timestamper) {
         maxWindow = MAX_CWND_INCREASE_PACKETS_PER_RTT;
         rtt = MINIMUM_TIMEOUT_MILLIS * 2L;
         timeStamper = timestamper;
         buffer = new OutPacketBuffer(timestamper);
-        buffer.setRemoteAdress(addr);
         log.debug(UtpAlgConfiguration.getString());
         timeStampNow = timeStamper.timeStamp();
     }
@@ -347,7 +343,6 @@ public class UtpAlgorithm {
      * Inform the algorithm that this packet just was send
      *
      * @param utpPacket utp packet version
-     * @param dgPacket  Datagram of first parameter.
      */
     public void markPacketOnfly(UtpPacket utpPacket) {
         timeStampNow = timeStamper.timeStamp();

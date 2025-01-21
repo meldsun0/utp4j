@@ -52,7 +52,7 @@ public class UtpAlgorithmTest {
         /* when delay is 50ms, then packetsize =
          * (delay/max_delay)*(max_packet-min_packet)+min_packet */
         MicroSecondsTimeStamp stamper = new MicroSecondsTimeStamp();
-        UtpAlgorithm alg = new UtpAlgorithm(stamper, new InetSocketAddress(51235));
+        UtpAlgorithm alg = new UtpAlgorithm(stamper);
         alg.setMinDelay(mockMinDelay);
         assertEquals(811, alg.sizeOfNextPacket());
 
@@ -90,7 +90,7 @@ public class UtpAlgorithmTest {
         MicroSecondsTimeStamp stamper = mock(MicroSecondsTimeStamp.class);
         when(stamper.timeStamp()).thenReturn(0L);
 
-        UtpAlgorithm algorithm = new UtpAlgorithm(stamper, new InetSocketAddress(51235));
+        UtpAlgorithm algorithm = new UtpAlgorithm(stamper);
         ByteBuffer bufferMock = ByteBuffer.allocate(10);
         bufferMock.put(0, (byte) 42);
         algorithm.setByteBuffer(bufferMock);
@@ -186,7 +186,7 @@ public class UtpAlgorithmTest {
         MicroSecondsTimeStamp stamper = mock(MicroSecondsTimeStamp.class);
         when(stamper.timeStamp()).thenReturn(0L);
 
-        UtpAlgorithm algorithm = new UtpAlgorithm(stamper, new InetSocketAddress(51235));
+        UtpAlgorithm algorithm = new UtpAlgorithm(stamper);
         ByteBuffer bufferMock = ByteBuffer.allocate(10);
         bufferMock.put(0, (byte) 42);
         algorithm.setByteBuffer(bufferMock);
@@ -224,7 +224,7 @@ public class UtpAlgorithmTest {
     public void testPacketSending() throws SocketException {
         MicroSecondsTimeStamp stamper = mock(MicroSecondsTimeStamp.class);
         when(stamper.timeStamp()).thenReturn(0L);
-        UtpAlgorithm algorithm = new UtpAlgorithm(stamper, new InetSocketAddress(51235));
+        UtpAlgorithm algorithm = new UtpAlgorithm(stamper);
         UtpAlgConfiguration.SEND_IN_BURST = true;
         UtpAlgConfiguration.MAX_BURST_SEND = 3;
 
@@ -300,7 +300,7 @@ public class UtpAlgorithmTest {
         UtpAlgConfiguration.MINIMUM_TIMEOUT_MILLIS = 500;
         MicroSecondsTimeStamp stamper = mock(MicroSecondsTimeStamp.class);
         when(stamper.timeStamp()).thenReturn(1000000L); // returns 1s
-        UtpAlgorithm algorithm = new UtpAlgorithm(stamper, new InetSocketAddress(51235));
+        UtpAlgorithm algorithm = new UtpAlgorithm(stamper);
         algorithm.setEstimatedRtt(0);
 
         OutPacketBuffer outBuffer = mock(OutPacketBuffer.class);

@@ -34,7 +34,7 @@ public class UTPWritingFuture {
         this.buffer = buffer;
         this.utpClient = utpClient;
         this.timeStamper = timeStamper;
-        this.algorithm = new UtpAlgorithm(timeStamper, utpClient.getRemoteAdress());
+        this.algorithm = new UtpAlgorithm(timeStamper);
         this.writerFuture = new CompletableFuture<>();
     }
 
