@@ -12,7 +12,7 @@ import java.nio.channels.FileChannel;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
-public class TestRead {
+public class offer {
 
     public static void main(String[] args) throws IOException, InterruptedException, ExecutionException {
         ByteBuffer buffer = ByteBuffer.allocate(150000000);
@@ -22,7 +22,7 @@ public class TestRead {
 
         CompletableFuture<Void> readFuture = server.read(buffer);
         readFuture.get();
-        saveAnswerOnFile(buffer, "hi");
+        saveAnswerOnFile(buffer, "offer");
         server.close();
     }
 

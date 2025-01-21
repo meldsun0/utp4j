@@ -10,7 +10,7 @@ import java.nio.channels.FileChannel;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
-public class TestWrite {
+public class GetContent {
     public static void main(String[] args) throws IOException, InterruptedException, ExecutionException {
 
         ByteBuffer buffer = ByteBuffer.allocate(150000000);
