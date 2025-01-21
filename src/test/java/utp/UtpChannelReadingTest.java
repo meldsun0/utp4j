@@ -24,11 +24,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.platform.commons.util.ReflectionUtils;
 import org.mockito.ArgumentCaptor;
 import org.mockito.junit.jupiter.MockitoExtension;
-import utp.network.UDPTransportLayer;
+import utp.network.udp.UDPTransportLayer;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
-import java.net.DatagramPacket;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.Iterator;
@@ -84,9 +83,6 @@ public class UtpChannelReadingTest {
         field3.setAccessible(true);
         field3.set(channel , CompletableFuture.completedFuture(null));
 
-
-        channel.setTransportAddress(new InetSocketAddress("localhost", 12345));
-
         // last recieved packet has seqNr. 2, next one will be packet with seqNr. 3
         channel.setAckNumber(2);
 
@@ -113,7 +109,7 @@ public class UtpChannelReadingTest {
             Thread.sleep(1000);
 
             // verify 6 ack packets where send and capture them
-            verify(udpTransportLayer, times(6)).sendPacket(ackOne.capture());
+            verify(udpTransportLayer, times(6)).sendPacket(ackOne.capture(), any());
             List<UtpPacket> allValues = ackOne.getAllValues();
             Iterator<UtpPacket> iterator = allValues.iterator();
 

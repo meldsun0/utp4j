@@ -1,12 +1,11 @@
 package utp.examples;
 
 import utp.network.TransportLayer;
-import utp.network.UDPTransportLayer;
+import utp.network.udp.UDPTransportLayer;
 import utp.UTPClient;
 
 import java.io.IOException;
 import java.io.RandomAccessFile;
-import java.net.DatagramPacket;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.concurrent.CompletableFuture;

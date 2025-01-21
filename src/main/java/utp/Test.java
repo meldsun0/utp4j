@@ -1,7 +1,7 @@
 package utp;
 
 import org.apache.tuweni.bytes.Bytes;
-import utp.network.UDPTransportLayer;
+import utp.network.udp.UDPTransportLayer;
 
 import java.io.File;
 import java.io.FileOutputStream;

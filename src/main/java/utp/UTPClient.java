@@ -4,6 +4,7 @@ import utp.algo.UtpAlgConfiguration;
 import utp.data.MicroSecondsTimeStamp;
 import utp.data.SelectiveAckHeaderExtension;
 import utp.data.UtpPacket;
+import utp.network.TransportAddress;
 import utp.network.TransportLayer;
 import utp.operations.UTPReadingFuture;
 import utp.operations.UTPWritingFuture;
@@ -186,7 +187,7 @@ public class UTPClient {
     }
 
     public void sendPacket(UtpPacket packet) throws IOException {
-       this.transportLayer.sendPacket(packet);
+       this.transportLayer.sendPacket(packet, this.session.getRemoteAddress());
     }
 
 
@@ -214,7 +215,7 @@ public class UTPClient {
         }
         try {
             this.session.incrementeConnectionAttempts();
-            this.transportLayer.sendPacket(synPacket);
+            this.transportLayer.sendPacket(synPacket, this.session.getRemoteAddress());
         } catch (IOException e) {
             this.connection.completeExceptionally(new SocketTimeoutException());
             retryConnectionTimeScheduler.shutdown();
@@ -222,9 +223,6 @@ public class UTPClient {
         }
     }
 
-    public SocketAddress getRemoteAdress() {
-        return this.session.getTransportAddress();
-    }
 
     public int getAckNumber() {
         return this.session.getAckNumber();
@@ -238,8 +236,8 @@ public class UTPClient {
         this.session.setAckNumer(ackNumber);
     }
 
-    public void setTransportAddress(InetSocketAddress localhost) {
-        this.session.setTransportAddress(localhost);
+    public void setTransportAddress(TransportAddress localhost) {
+        this.session.setRemoteAddress(localhost);
     }
 
     public boolean isAlive() {

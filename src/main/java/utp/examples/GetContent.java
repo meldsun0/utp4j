@@ -1,14 +1,12 @@
 package utp.examples;
 
-import utp.data.UtpPacket;
 import utp.network.TransportLayer;
-import utp.network.UDPTransportLayer;
+import utp.network.udp.UDPTransportLayer;
 import utp.UTPClient;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.net.DatagramPacket;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.charset.StandardCharsets;
